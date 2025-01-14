@@ -22,7 +22,7 @@
 (define-foreign-type yaml_error_type_t int)
 (define-foreign-type yaml_event_type_t int)
 ; XXX: Here use int as return value is because the typedef "yaml_event_type_t" cannot be set in (foreigin-safe-lambda*)
-;(define yaml-event->type (foreign-lambda* int (((c-pointer "yaml_event_t") event_p)) "C_return((event_p)->type);"))
+;(define yaml-event->type (foreign-lambda* int (((c-pointer "yaml_event_t") _p)) "C_return((_p)->type);"))
 
 (define (read-yaml-port . <-port)
 	(if (not (null? <-port)) (current-input-port (car <-port))) ;implicit (input-port?) check in (current-input-port)
@@ -31,21 +31,28 @@
 	(yaml_parser_initialize (yaml-parser))
 	(yaml_parser_set_input_file (yaml-parser) (current-input-port))
 
-
 	(define (:read-yaml-port @ parser event port)
 		(cond
-			((not (yaml_parser_parse (yaml-parser) (yaml-event)))
-				(print-call-chain (current-error-port))
+			((not (= 1 (yaml_parser_parse (yaml-parser) (yaml-event))))
 				(error (sprintf
-					"[~A]"
-					((foreigin-safe-lambda* yaml_error_type_t (((c-pointer "yaml_parser_t") yaml_parser_p)) "C_return((yaml_parser_p)->error);") (yaml-parser)))))
+					"[~A] ~A ~A at [line:~A , colunm:~A]"
+					((foreign-lambda* yaml_error_type_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->error);") (yaml-parser))
+					((foreign-lambda* nonnull-c-string (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->problem);") (yaml-parser))
+					(if ((foreign-lambda* nonnull-c-string (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->context);") (yaml-parser))
+						((foreign-lambda* nonnull-c-string (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->context);") (yaml-parser))
+						"")
+					(+ 0 ((foreign-lambda* size_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->problem_mark.line);") (yaml-parser)))
+					(+ 1 ((foreign-lambda* size_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->problem_mark.column);") (yaml-parser)))
+				)))
 			(else
-				(print ((foreign-lambda* int (((c-pointer "yaml_event_t") event_p)) "C_return((event_p)->type);") (yaml-event)))
-				(:read-yaml-port @ parser event port))))
+				;(print (=
+				;	((foreign-lambda* int (((c-pointer "yaml_event_t") _p)) "C_return((_p)->type);") (yaml-event))
+				;	(foreign-value "(YAML_STREAM_START_EVENT)" int)
+				;))
+				(:read-yaml-port @ parser event port)
+			)))
 	(:read-yaml-port "" (yaml-parser) (yaml-event) <-port))
 
-;(set! f (open-input-file "/home/luli/tmp/tmp.yaml"))
-;(print (read-yaml-port f))
-;(close-input-port f)
-
-(read-yaml-port)
+(set! f (open-input-file "/home/luli/tmp/tmp.yaml"))
+(print (read-yaml-port f))
+(close-input-port f)

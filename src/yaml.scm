@@ -7,22 +7,16 @@
 (foreign-declare "#include <string.h>")
 (foreign-declare "#include <yaml.h>")
 
-(define yaml-parser (foreign-lambda* (c-pointer "yaml_parser_t") () "static yaml_parser_t yaml_parser; C_return(&yaml_parser);"))
-(define yaml-event (foreign-lambda* (c-pointer "yaml_event_t") () "static yaml_event_t yaml_event; C_return(&yaml_event);"))
-
-(define memset (foreign-lambda c-pointer "memset" c-pointer int size_t))
-
-(define yaml_parser_initialize (foreign-lambda int "yaml_parser_initialize" (c-pointer "yaml_parser_t")))
-(define yaml_parser_set_input_file (foreign-lambda void "yaml_parser_set_input_file" (c-pointer "yaml_parser_t") (c-pointer "FILE")))
-(define yaml_parser_set_input_string (foreign-lambda void "yaml_parser_set_input_string" (c-pointer "yaml_parser_t") c-string size_t))
-(define yaml_parser_parse (foreign-lambda int "yaml_parser_parse" (c-pointer "yaml_parser_t") (c-pointer "yaml_event_t")))
-(define yaml_event_delete (foreign-lambda void "yaml_event_delete" (c-pointer "yaml_event_t")))
-(define yaml_parser_delete (foreign-lambda void "yaml_parser_delete" (c-pointer "yaml_parser_t")))
-(define yaml-event->scalar.value (foreign-lambda* (c-pointer "yaml_char_t") (((c-pointer "yaml_event_t") yaml_event_p)) "C_return((yaml_event_p)->data.scalar.value);"))
 ;(define-foreign-type yaml_event_type_t "yaml_event_type_t")
-(define-foreign-type yaml_error_type_t int)
 (define-foreign-type yaml_event_type_t int)
 ; XXX: Here use int as return value is because the typedef "yaml_event_type_t" cannot be set in (foreigin-safe-lambda*)
+(define-foreign-type yaml_error_type_t int)
+(define-foreign-type yaml_encoding_t int)
+
+(define YAML_ANY_ENCODING (foreign-value "(YAML_ANY_ENCODING)" yaml_encoding_t))
+(define YAML_UTF8_ENCODING (foreign-value "(YAML_UTF8_ENCODING)" yaml_encoding_t))
+(define YAML_UTF16LE_ENCODING (foreign-value "(YAML_UTF16LE_ENCODING)" yaml_encoding_t))
+(define YAML_UTF16BE_ENCODING (foreign-value "(YAML_UTF16BE_ENCODING)" yaml_encoding_t))
 
 (define YAML_NO_EVENT (foreign-value "(YAML_NO_EVENT)" yaml_event_type_t))
 (define YAML_STREAM_START_EVENT (foreign-value "(YAML_STREAM_START_EVENT)" yaml_event_type_t))
@@ -49,6 +43,19 @@
 		(cons YAML_MAPPING_START_EVENT (list '(#:name . "YAML_MAPPING_START_EVENT")))
 		(cons YAML_MAPPING_END_EVENT (list '(#:name . "YAML_MAPPING_END_EVENT")))
 	))
+
+(define yaml-parser (foreign-lambda* (c-pointer "yaml_parser_t") () "static yaml_parser_t yaml_parser; C_return(&yaml_parser);"))
+(define yaml-event (foreign-lambda* (c-pointer "yaml_event_t") () "static yaml_event_t yaml_event; C_return(&yaml_event);"))
+
+(define memset (foreign-lambda c-pointer "memset" c-pointer int size_t))
+
+(define yaml_parser_initialize (foreign-lambda int "yaml_parser_initialize" (c-pointer "yaml_parser_t")))
+(define yaml_parser_set_input_file (foreign-lambda void "yaml_parser_set_input_file" (c-pointer "yaml_parser_t") (c-pointer "FILE")))
+(define yaml_parser_set_input_string (foreign-lambda void "yaml_parser_set_input_string" (c-pointer "yaml_parser_t") c-string size_t))
+(define yaml_parser_parse (foreign-lambda int "yaml_parser_parse" (c-pointer "yaml_parser_t") (c-pointer "yaml_event_t")))
+(define yaml_event_delete (foreign-lambda void "yaml_event_delete" (c-pointer "yaml_event_t")))
+(define yaml_parser_delete (foreign-lambda void "yaml_parser_delete" (c-pointer "yaml_parser_t")))
+(define yaml-event->scalar.value (foreign-lambda* (c-pointer "yaml_char_t") (((c-pointer "yaml_event_t") yaml_event_p)) "C_return((yaml_event_p)->data.scalar.value);"))
 
 (define (read-yaml-port . <-port)
 	(if (not (null? <-port)) (current-input-port (car <-port))) ;implicit (input-port?) check in (current-input-port)

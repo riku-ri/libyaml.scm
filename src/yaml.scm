@@ -29,20 +29,19 @@
 (define YAML_SEQUENCE_END_EVENT (foreign-value "(YAML_SEQUENCE_END_EVENT)" yaml_event_type_t))
 (define YAML_MAPPING_START_EVENT (foreign-value "(YAML_MAPPING_START_EVENT)" yaml_event_type_t))
 (define YAML_MAPPING_END_EVENT (foreign-value "(YAML_MAPPING_END_EVENT)" yaml_event_type_t))
-(define <yaml-event-type>
-	(list
-		(cons YAML_NO_EVENT (list '(#:name . "YAML_NO_EVENT")))
-		(cons YAML_STREAM_START_EVENT (list '(#:name . "YAML_STREAM_START_EVENT")))
-		(cons YAML_STREAM_END_EVENT (list '(#:name . "YAML_STREAM_END_EVENT")))
-		(cons YAML_DOCUMENT_START_EVENT (list '(#:name . "YAML_DOCUMENT_START_EVENT")))
-		(cons YAML_DOCUMENT_END_EVENT (list '(#:name . "YAML_DOCUMENT_END_EVENT")))
-		(cons YAML_ALIAS_EVENT (list '(#:name . "YAML_ALIAS_EVENT")))
-		(cons YAML_SCALAR_EVENT (list '(#:name . "YAML_SCALAR_EVENT")))
-		(cons YAML_SEQUENCE_START_EVENT (list '(#:name . "YAML_SEQUENCE_START_EVENT")))
-		(cons YAML_SEQUENCE_END_EVENT (list '(#:name . "YAML_SEQUENCE_END_EVENT")))
-		(cons YAML_MAPPING_START_EVENT (list '(#:name . "YAML_MAPPING_START_EVENT")))
-		(cons YAML_MAPPING_END_EVENT (list '(#:name . "YAML_MAPPING_END_EVENT")))
-	))
+(define <yaml-event-type> (list
+	(cons YAML_NO_EVENT (list '(#:name . "YAML_NO_EVENT")))
+	(cons YAML_STREAM_START_EVENT (list '(#:name . "YAML_STREAM_START_EVENT")))
+	(cons YAML_STREAM_END_EVENT (list '(#:name . "YAML_STREAM_END_EVENT")))
+	(cons YAML_DOCUMENT_START_EVENT (list '(#:name . "YAML_DOCUMENT_START_EVENT")))
+	(cons YAML_DOCUMENT_END_EVENT (list '(#:name . "YAML_DOCUMENT_END_EVENT")))
+	(cons YAML_ALIAS_EVENT (list '(#:name . "YAML_ALIAS_EVENT")))
+	(cons YAML_SCALAR_EVENT (list '(#:name . "YAML_SCALAR_EVENT")))
+	(cons YAML_SEQUENCE_START_EVENT (list '(#:name . "YAML_SEQUENCE_START_EVENT")))
+	(cons YAML_SEQUENCE_END_EVENT (list '(#:name . "YAML_SEQUENCE_END_EVENT")))
+	(cons YAML_MAPPING_START_EVENT (list '(#:name . "YAML_MAPPING_START_EVENT")))
+	(cons YAML_MAPPING_END_EVENT (list '(#:name . "YAML_MAPPING_END_EVENT")))
+))
 
 (define yaml-parser (foreign-lambda* (c-pointer "yaml_parser_t") () "static yaml_parser_t yaml_parser; C_return(&yaml_parser);"))
 (define yaml-event (foreign-lambda* (c-pointer "yaml_event_t") () "static yaml_event_t yaml_event; C_return(&yaml_event);"))
@@ -90,8 +89,7 @@
 						)
 						(yaml_event_delete (yaml-event))
 						(yaml_parser_delete (yaml-parser))
-						(error errmessage)
-						))
+						(error errmessage)))
 				(
 					(=
 						YAML_STREAM_END_EVENT
@@ -114,6 +112,4 @@
 						(:read-yaml-port :@ parser event port))))))
 	(:read-yaml-port "" (yaml-parser) (yaml-event) <-port))
 
-(set! f (open-input-file "/home/luli/tmp/tmp.yaml"))
-(print (read-yaml-port f))
-(close-input-port f)
+(read-yaml-port)

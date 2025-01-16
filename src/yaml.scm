@@ -65,10 +65,13 @@
 
 	(define (>read-yaml-port >@ >parser >event >port)
 		(let
-			((yaml_parser_parse<- (yaml_parser_parse (yaml-parser) (yaml-event))))
+			(
+				(yaml_parser_parse<- (yaml_parser_parse (yaml-parser) (yaml-event)))
+				(post (lambda () (close-input-port (current-input-port)) (yaml_event_delete (yaml-event)) (yaml_parser_delete (yaml-parser))))
+			)
 			(cond
 				((not (= yaml_parser_parse<- 1)) ; According to comment in yaml.h , yaml_parser_parse() return 1 if the function succeeded
-					(close-input-port (current-input-port))
+					
 					(let*
 						(
 							(error<- (foreign-lambda* yaml_error_type_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->error);"))
@@ -87,15 +90,14 @@
 									(+ 1 (problem_mark.column<- (yaml-parser))))
 							)
 						)
-						(yaml_event_delete (yaml-event))
-						(yaml_parser_delete (yaml-parser))
+						(post)
 						(error errmessage)))
 				(
 					(=
 						YAML_STREAM_END_EVENT
 						((foreign-lambda* yaml_event_type_t (((c-pointer "yaml_event_t") _p)) "C_return((_p)->type);") (yaml-event))
 					)
-					(close-input-port (current-input-port)))
+					(post))
 				(else
 					(let*
 						(

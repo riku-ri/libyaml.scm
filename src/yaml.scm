@@ -63,7 +63,7 @@
 	(yaml_parser_initialize (yaml-parser))
 	(yaml_parser_set_input_file (yaml-parser) (current-input-port))
 
-	(define (:read-yaml-port :@ parser event port)
+	(define (>read-yaml-port >@ >parser >event >port)
 		(let
 			((yaml_parser_parse<- (yaml_parser_parse (yaml-parser) (yaml-event))))
 			(cond
@@ -109,7 +109,7 @@
 									(data.scalar.value<- (yaml-event)) "\"\n") ""))
 							(else
 								(print (assq. #:name (assq. (type<- (yaml-event)) <yaml-event-type>)))))
-						(:read-yaml-port :@ parser event port))))))
-	(:read-yaml-port "" (yaml-parser) (yaml-event) <-port))
+						(>read-yaml-port >@ >parser >event >port))))))
+	(>read-yaml-port "" (yaml-parser) (yaml-event) <-port))
 
 (read-yaml-port)

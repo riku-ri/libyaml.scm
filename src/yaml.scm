@@ -83,7 +83,7 @@
 									(error<- (yaml-parser))
 									(problem<- (yaml-parser))
 									(if (context<- (yaml-parser)) (context<- (yaml-parser)) "")
-									(+ 0 (problem_mark.line<- (yaml-parser)))
+									(+ 1 (problem_mark.line<- (yaml-parser)))
 									(+ 1 (problem_mark.column<- (yaml-parser))))
 							)
 						)

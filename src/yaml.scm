@@ -1,23 +1,34 @@
 (import scheme)
 (import (chicken foreign))
 (import (chicken format))
-
-(define (assq. key <list>) (cdr (assq key <list>)))
+(import (chicken irregex))
 
 (foreign-declare "#include <string.h>")
 (foreign-declare "#include <yaml.h>")
 
-;(define-foreign-type yaml_event_type_t "yaml_event_type_t")
-(define-foreign-type yaml_event_type_t int)
-; XXX: Here use int as return value is because the typedef "yaml_event_type_t" cannot be set in (foreigin-safe-lambda*)
+(define (assq.  key <assq>) (cdr (assq  key <assq>))) ; TODO: Maybe test only. This definition should not be in the top-level
+(define (assv.  key <assq>) (cdr (assv  key <assq>))) ; TODO: Maybe test only. This definition should not be in the top-level
+(define (assoc. key <assq>) (cdr (assoc key <assq>))) ; TODO: Maybe test only. This definition should not be in the top-level
+
 (define-foreign-type yaml_error_type_t int)
+; XXX: Here use int as return value is because the typedef cannot be set in (foreigin-lambda*)
+(define YAML_NO_ERROR (foreign-value "YAML_NO_ERROR" yaml_error_type_t))
+(define YAML_MEMORY_ERROR (foreign-value "YAML_MEMORY_ERROR" yaml_error_type_t))
+(define YAML_READER_ERROR (foreign-value "YAML_READER_ERROR" yaml_error_type_t))
+(define YAML_SCANNER_ERROR (foreign-value "YAML_SCANNER_ERROR" yaml_error_type_t))
+(define YAML_PARSER_ERROR (foreign-value "YAML_PARSER_ERROR" yaml_error_type_t))
+(define YAML_COMPOSER_ERROR (foreign-value "YAML_COMPOSER_ERROR" yaml_error_type_t))
+(define YAML_WRITER_ERROR (foreign-value "YAML_WRITER_ERROR" yaml_error_type_t))
+(define YAML_EMITTER_ERROR (foreign-value "YAML_EMITTER_ERROR" yaml_error_type_t))
+; TODO: Such definition can be done with libclang<-yaml.h and m4-like
+
 (define-foreign-type yaml_encoding_t int)
+(define YAML_ANY_ENCODING (foreign-value "YAML_ANY_ENCODING" yaml_encoding_t))
+(define YAML_UTF8_ENCODING (foreign-value "YAML_UTF8_ENCODING" yaml_encoding_t))
+(define YAML_UTF16LE_ENCODING (foreign-value "YAML_UTF16LE_ENCODING" yaml_encoding_t))
+(define YAML_UTF16BE_ENCODING (foreign-value "YAML_UTF16BE_ENCODING" yaml_encoding_t))
 
-(define YAML_ANY_ENCODING (foreign-value "(YAML_ANY_ENCODING)" yaml_encoding_t))
-(define YAML_UTF8_ENCODING (foreign-value "(YAML_UTF8_ENCODING)" yaml_encoding_t))
-(define YAML_UTF16LE_ENCODING (foreign-value "(YAML_UTF16LE_ENCODING)" yaml_encoding_t))
-(define YAML_UTF16BE_ENCODING (foreign-value "(YAML_UTF16BE_ENCODING)" yaml_encoding_t))
-
+(define-foreign-type yaml_event_type_t int)
 (define YAML_NO_EVENT (foreign-value "(YAML_NO_EVENT)" yaml_event_type_t))
 (define YAML_STREAM_START_EVENT (foreign-value "(YAML_STREAM_START_EVENT)" yaml_event_type_t))
 (define YAML_STREAM_END_EVENT (foreign-value "(YAML_STREAM_END_EVENT)" yaml_event_type_t))
@@ -29,89 +40,147 @@
 (define YAML_SEQUENCE_END_EVENT (foreign-value "(YAML_SEQUENCE_END_EVENT)" yaml_event_type_t))
 (define YAML_MAPPING_START_EVENT (foreign-value "(YAML_MAPPING_START_EVENT)" yaml_event_type_t))
 (define YAML_MAPPING_END_EVENT (foreign-value "(YAML_MAPPING_END_EVENT)" yaml_event_type_t))
-(define <yaml-event-type> (list
-	(cons YAML_NO_EVENT (list '(#:name . "YAML_NO_EVENT")))
-	(cons YAML_STREAM_START_EVENT (list '(#:name . "YAML_STREAM_START_EVENT")))
-	(cons YAML_STREAM_END_EVENT (list '(#:name . "YAML_STREAM_END_EVENT")))
-	(cons YAML_DOCUMENT_START_EVENT (list '(#:name . "YAML_DOCUMENT_START_EVENT")))
-	(cons YAML_DOCUMENT_END_EVENT (list '(#:name . "YAML_DOCUMENT_END_EVENT")))
-	(cons YAML_ALIAS_EVENT (list '(#:name . "YAML_ALIAS_EVENT")))
-	(cons YAML_SCALAR_EVENT (list '(#:name . "YAML_SCALAR_EVENT")))
-	(cons YAML_SEQUENCE_START_EVENT (list '(#:name . "YAML_SEQUENCE_START_EVENT")))
-	(cons YAML_SEQUENCE_END_EVENT (list '(#:name . "YAML_SEQUENCE_END_EVENT")))
-	(cons YAML_MAPPING_START_EVENT (list '(#:name . "YAML_MAPPING_START_EVENT")))
-	(cons YAML_MAPPING_END_EVENT (list '(#:name . "YAML_MAPPING_END_EVENT")))
-))
 
-(define yaml-parser (foreign-lambda* (c-pointer "yaml_parser_t") () "static yaml_parser_t yaml_parser; C_return(&yaml_parser);"))
-(define yaml-event (foreign-lambda* (c-pointer "yaml_event_t") () "static yaml_event_t yaml_event; C_return(&yaml_event);"))
+(define-foreign-type yaml_scalar_style_t int)
 
-(define memset (foreign-lambda c-pointer "memset" c-pointer int size_t))
-
+(define yaml_parser_set_encoding (foreign-lambda void "yaml_parser_set_encoding" (c-pointer "yaml_parser_t") yaml_encoding_t))
 (define yaml_parser_initialize (foreign-lambda int "yaml_parser_initialize" (c-pointer "yaml_parser_t")))
 (define yaml_parser_set_input_file (foreign-lambda void "yaml_parser_set_input_file" (c-pointer "yaml_parser_t") (c-pointer "FILE")))
-(define yaml_parser_set_input_string (foreign-lambda void "yaml_parser_set_input_string" (c-pointer "yaml_parser_t") c-string size_t))
+;(define yaml_parser_set_input_string (foreign-lambda void "yaml_parser_set_input_string" (c-pointer "yaml_parser_t") c-string size_t))
+; Use (open-input-string) if read from string
 (define yaml_parser_parse (foreign-lambda int "yaml_parser_parse" (c-pointer "yaml_parser_t") (c-pointer "yaml_event_t")))
 (define yaml_event_delete (foreign-lambda void "yaml_event_delete" (c-pointer "yaml_event_t")))
 (define yaml_parser_delete (foreign-lambda void "yaml_parser_delete" (c-pointer "yaml_parser_t")))
 (define yaml-event->scalar.value (foreign-lambda* (c-pointer "yaml_char_t") (((c-pointer "yaml_event_t") yaml_event_p)) "C_return((yaml_event_p)->data.scalar.value);"))
 
-(define (read-yaml-port . <-port)
-	(if (not (null? <-port)) (current-input-port (car <-port))) ;implicit (input-port?) check in (current-input-port)
-	(memset (yaml-parser) 0 (foreign-type-size "yaml_parser_t"))
-	(memset (yaml-event) 0 (foreign-type-size "yaml_event_t"))
-	(yaml_parser_initialize (yaml-parser))
-	(yaml_parser_set_input_file (yaml-parser) (current-input-port))
+(define (read-yaml . <optional>)
+	(let*
+		(
+			(memset (foreign-lambda c-pointer "memset" c-pointer int size_t))
 
-	(define (>read-yaml-port >@ >parser >event >port)
-		(let
-			(
-				(yaml_parser_parse<- (yaml_parser_parse (yaml-parser) (yaml-event)))
-				(post (lambda () (close-input-port (current-input-port)) (yaml_event_delete (yaml-event)) (yaml_parser_delete (yaml-parser))))
-			)
-			(cond
-				((not (= yaml_parser_parse<- 1)) ; According to comment in yaml.h , yaml_parser_parse() return 1 if the function succeeded
-					
-					(let*
-						(
-							(error<- (foreign-lambda* yaml_error_type_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->error);"))
-							(problem<- (foreign-lambda* c-string (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->problem);"))
-							(context<- (foreign-lambda* c-string (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->context);"))
-							(problem_mark.line<- (foreign-lambda* size_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->problem_mark.line);"))
-							(problem_mark.column<- (foreign-lambda* size_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->problem_mark.column);"))
-							(
-								errmessage
-								(sprintf
-									"[~A] ~A ~A at [line:~A , colunm:~A]"
-									(error<- (yaml-parser))
-									(problem<- (yaml-parser))
-									(if (context<- (yaml-parser)) (context<- (yaml-parser)) "")
-									(+ 1 (problem_mark.line<- (yaml-parser)))
-									(+ 1 (problem_mark.column<- (yaml-parser))))
-							)
-						)
-						(post)
-						(error errmessage)))
-				(
-					(=
-						YAML_STREAM_END_EVENT
-						((foreign-lambda* yaml_event_type_t (((c-pointer "yaml_event_t") _p)) "C_return((_p)->type);") (yaml-event))
-					)
-					(post))
-				(else
-					(let*
-						(
-							(type<- (foreign-lambda* yaml_event_type_t (((c-pointer "yaml_event_t") _p)) "C_return((_p)->type);"))
-							(data.scalar.value<- (foreign-lambda* c-string (((c-pointer "yaml_event_t") _p)) "C_return((_p)->data.scalar.value);"))
-						)
+			(&parser (foreign-lambda* (c-pointer "yaml_parser_t") () "static yaml_parser_t yaml_parser; C_return(&yaml_parser);"))
+			(&event (foreign-lambda* (c-pointer "yaml_event_t") () "static yaml_event_t yaml_event; C_return(&yaml_event);"))
+
+			(type<- (foreign-lambda* yaml_event_type_t (((c-pointer "yaml_event_t") _p)) "C_return((_p)->type);"))
+			(error<- (foreign-lambda* yaml_error_type_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->error);"))
+			(problem<- (foreign-lambda* c-string (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->problem);"))
+			(context<- (foreign-lambda* c-string (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->context);"))
+			(problem_mark.line<- (foreign-lambda* size_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->problem_mark.line);"))
+			(problem_mark.column<- (foreign-lambda* size_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->problem_mark.column);"))
+			(data.scalar.value<- (foreign-lambda* c-string (((c-pointer "yaml_event_t") _p)) "C_return((_p)->data.scalar.value);"))
+
+			($enum ; construct an association list that contain (#:string . (symbol->string))
+				((lambda ($) ($ $))
+					(lambda ($unit) (lambda (<enum>)
 						(cond
-							((= YAML_SCALAR_EVENT (type<- (yaml-event)))
-								(print* (string-append
-									(assq. #:name (assq. (type<- (yaml-event)) <yaml-event-type>)) ": \""
-									(data.scalar.value<- (yaml-event)) "\"\n") ""))
-							(else
-								(print (assq. #:name (assq. (type<- (yaml-event)) <yaml-event-type>)))))
-						(>read-yaml-port >@ >parser >event >port))))))
-	(>read-yaml-port "" (yaml-parser) (yaml-event) <-port))
+							((null? <enum>) '())
+							(else (cons `(,(eval (car <enum>)) (#:string . ,(symbol->string (car <enum>)))) (($unit $unit) (cdr <enum>)))))))))
 
-(read-yaml-port)
+			(yaml_error_type_e ($enum '(
+				YAML_NO_ERROR
+				YAML_MEMORY_ERROR
+				YAML_READER_ERROR
+				YAML_SCANNER_ERROR
+				YAML_PARSER_ERROR
+				YAML_COMPOSER_ERROR
+				YAML_WRITER_ERROR
+				YAML_EMITTER_ERROR
+			)))
+			(yaml_encoding_e ($enum '(
+				YAML_ANY_ENCODING
+				YAML_UTF8_ENCODING
+				YAML_UTF16LE_ENCODING
+				YAML_UTF16BE_ENCODING
+			)))
+		)
+		(if (assoc #:port <optional>) (if (string? (cdr (assoc #:port <optional>))) (error "Use (open-input-string) instead")))
+		(current-input-port (if (assoc #:port <optional>) (cdr (assoc #:port <optional>)) (current-input-port)))
+		(memset (&parser) 0 (foreign-type-size "yaml_parser_t"))
+		(memset (&event) 0 (foreign-type-size "yaml_event_t"))
+
+		(let* ((yaml_parser_initialize<- (yaml_parser_initialize (&parser))))
+			(if (not (= 1 yaml_parser_initialize<-))
+				(error (sprintf "[~A] ~A" yaml_parser_initialize<- (error<- (&parser))))))
+		(yaml_parser_set_input_file (&parser) (current-input-port))
+		(yaml_parser_set_encoding (&parser) (if (assoc #:encoding <optional>) (cdr (assoc #:encoding <optional>)) YAML_ANY_ENCODING))
+		(if (assoc #:encoding <optional>)
+			(assert (=
+				((foreign-lambda* yaml_encoding_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->encoding);") (&parser))
+				(cdr (assoc #:encoding <optional>)))))
+		;(write (assq. #:string (assq. ((foreign-lambda* yaml_encoding_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->encoding);") (&parser)) yaml_encoding_e)))
+		(define (>read-yaml)
+			(if (not (list? <optional>)) (error "paramters to (read-yaml) must be a association list"))
+			(let*
+				(
+
+					($before-ending (lambda () (close-input-port (current-input-port)) (yaml_event_delete (&event)) (yaml_parser_delete (&parser))))
+
+					($error (lambda (s) (error (sprintf "You should never go into this event [~A]" s))))
+					(yaml_event_type_e ($enum '(
+						YAML_NO_EVENT
+						YAML_STREAM_START_EVENT
+						YAML_STREAM_END_EVENT
+						YAML_DOCUMENT_START_EVENT
+						YAML_DOCUMENT_END_EVENT
+						YAML_ALIAS_EVENT
+						YAML_SCALAR_EVENT
+						YAML_SEQUENCE_START_EVENT
+						YAML_SEQUENCE_END_EVENT
+						YAML_MAPPING_START_EVENT
+						YAML_MAPPING_END_EVENT
+					)))
+					(set-event-hook! (lambda (key $lambda)
+						(if (assoc #:lambda (cdr (assoc key yaml_event_type_e)))
+							(set-cdr! (cdr (assoc #:lambda (cdr (assoc key yaml_event_type_e)))) $lambda)
+							(set-cdr!
+								(assoc key yaml_event_type_e)
+								(cons (cons #:lambda $lambda) (cdr (assoc key yaml_event_type_e)))))))
+					(set-event! ((lambda ()
+						(set-event-hook! YAML_SCALAR_EVENT (lambda () (data.scalar.value<- (&event)))) ; TODO: Distinguish number, string, etc.
+						(set-event-hook! YAML_SEQUENCE_END_EVENT (lambda () '()))
+						(set-event-hook! YAML_SEQUENCE_START_EVENT (lambda ()
+							(define (>sequence @)
+								(cond
+									((= YAML_SEQUENCE_END_EVENT (type<- (&event))) (reverse @))
+									(else (>sequence (cons (>read-yaml) @)))))
+							(>sequence '())))
+						(set-event-hook! YAML_DOCUMENT_END_EVENT (lambda () '()))
+						(set-event-hook! YAML_DOCUMENT_START_EVENT (lambda ()
+							(define (>document @)
+								(cond
+									((= YAML_DOCUMENT_END_EVENT (type<- (&event))) (car (reverse (cdr @))))
+									(else (>document (cons (>read-yaml) @)))))
+							(>document '())))
+						(set-event-hook! YAML_STREAM_END_EVENT (lambda () '()))
+						(set-event-hook! YAML_STREAM_START_EVENT (lambda ()
+							(define (>stream @)
+								(cond
+									((= YAML_STREAM_END_EVENT (type<- (&event))) (reverse (cdr @)))
+									(else (>stream (cons (>read-yaml) @)))))
+							(>stream '())))
+					)))
+				)
+				(cond
+					((not (= (yaml_parser_parse (&parser) (&event)) 1)) ; According to comment in yaml.h , yaml_parser_parse() return 1 if the function succeeded
+						(let*
+							(
+								(errmessage (sprintf
+									"[~A] ~A ~A at [line:~A , colunm:~A]"
+									(error<- (&parser))
+									(problem<- (&parser))
+									(if (context<- (&parser)) (context<- (&parser)) "")
+									(+ 1 (problem_mark.line<- (&parser)))
+									(+ 1 (problem_mark.column<- (&parser)))))
+							)
+						($before-ending)
+						(error errmessage)))
+					(else
+						(write "here") ; Here always YAML_STREAM_START_EVENT is because (>read-yaml) always reset the parser/file/event
+						(print (assoc #:string (cdr (assoc (type<- (&event)) yaml_event_type_e))))
+						(let ((v ((cdr (assoc #:lambda (cdr (assoc (type<- (&event)) yaml_event_type_e))))))) (print v) v)
+					)
+				)
+			))
+			(>read-yaml)))
+
+(write (read-yaml))

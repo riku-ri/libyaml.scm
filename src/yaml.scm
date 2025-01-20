@@ -129,36 +129,6 @@
 						YAML_MAPPING_START_EVENT
 						YAML_MAPPING_END_EVENT
 					)))
-					(set-event-hook! (lambda (key $lambda)
-						(if (assoc #:lambda (cdr (assoc key yaml_event_type_e)))
-							(set-cdr! (cdr (assoc #:lambda (cdr (assoc key yaml_event_type_e)))) $lambda)
-							(set-cdr!
-								(assoc key yaml_event_type_e)
-								(cons (cons #:lambda $lambda) (cdr (assoc key yaml_event_type_e)))))))
-					(set-event! ((lambda ()
-						(set-event-hook! YAML_SCALAR_EVENT (lambda () (data.scalar.value<- (&event)))) ; TODO: Distinguish number, string, etc.
-						(set-event-hook! YAML_SEQUENCE_END_EVENT (lambda () '()))
-						(set-event-hook! YAML_SEQUENCE_START_EVENT (lambda ()
-							(define (>sequence @)
-								(cond
-									((= YAML_SEQUENCE_END_EVENT (type<- (&event))) (reverse @))
-									(else (>sequence (cons (>read-yaml) @)))))
-							(>sequence '())))
-						(set-event-hook! YAML_DOCUMENT_END_EVENT (lambda () '()))
-						(set-event-hook! YAML_DOCUMENT_START_EVENT (lambda ()
-							(define (>document @)
-								(cond
-									((= YAML_DOCUMENT_END_EVENT (type<- (&event))) (car (reverse (cdr @))))
-									(else (>document (cons (>read-yaml) @)))))
-							(>document '())))
-						(set-event-hook! YAML_STREAM_END_EVENT (lambda () '()))
-						(set-event-hook! YAML_STREAM_START_EVENT (lambda ()
-							(define (>stream @)
-								(cond
-									((= YAML_STREAM_END_EVENT (type<- (&event))) (reverse (cdr @)))
-									(else (>stream (cons (>read-yaml) @)))))
-							(>stream '())))
-					)))
 				)
 				(cond
 					((not (= (yaml_parser_parse (&parser) (&event)) 1)) ; According to comment in yaml.h , yaml_parser_parse() return 1 if the function succeeded
@@ -175,9 +145,30 @@
 						($before-ending)
 						(error errmessage)))
 					(else
-						(write "here") ; Here always YAML_STREAM_START_EVENT is because (>read-yaml) always reset the parser/file/event
+						(write "here")
 						(print (assoc #:string (cdr (assoc (type<- (&event)) yaml_event_type_e))))
-						(let ((v ((cdr (assoc #:lambda (cdr (assoc (type<- (&event)) yaml_event_type_e))))))) (print v) v)
+						;(let ((v ((cdr (assoc #:lambda (cdr (assoc (type<- (&event)) yaml_event_type_e))))))) (print v) v)
+						;(print (assoc #:string (cdr (assoc (type<- (&event)) yaml_event_type_e))))
+						(cond
+							((= YAML_SCALAR_EVENT (type<- (&event))) (data.scalar.value<- (&event))) ; TODO: distinguish var values
+							;((= YAML_STREAM_END_EVENT (type<- (&event))) '())
+							((or (= YAML_STREAM_START_EVENT (type<- (&event))) (= YAML_STREAM_END_EVENT (type<- (&event))))
+								(((lambda ($) ($ $))
+									(lambda (R)
+										(lambda (@)
+											(cond
+												((= YAML_STREAM_END_EVENT (type<- (&event))) (reverse @))
+												(else ((R R) (cons (>read-yaml) @)))))))
+								'()))
+							((or (= YAML_DOCUMENT_START_EVENT (type<- (&event))) (= YAML_DOCUMENT_END_EVENT (type<- (&event))))
+								(((lambda ($) ($ $))
+									(lambda (R)
+										(lambda ()
+											(cond
+												((= YAML_DOCUMENT_END_EVENT (type<- (&event))) '())
+												(else ((R R)))))))
+								))
+						)
 					)
 				)
 			))

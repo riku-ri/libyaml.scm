@@ -93,6 +93,7 @@
 				YAML_UTF16BE_ENCODING
 			)))
 		)
+		(if (not (list? <optional>)) (error "paramters to (read-yaml) must be a association list"))
 		(if (assoc #:port <optional>) (if (string? (cdr (assoc #:port <optional>))) (error "Use (open-input-string) instead")))
 		(current-input-port (if (assoc #:port <optional>) (cdr (assoc #:port <optional>)) (current-input-port)))
 		(memset (&parser) 0 (foreign-type-size "yaml_parser_t"))
@@ -108,13 +109,10 @@
 				((foreign-lambda* yaml_encoding_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->encoding);") (&parser))
 				(cdr (assoc #:encoding <optional>)))))
 		;(write (assq. #:string (assq. ((foreign-lambda* yaml_encoding_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->encoding);") (&parser)) yaml_encoding_e)))
-		(define (>read-yaml)
-			(if (not (list? <optional>)) (error "paramters to (read-yaml) must be a association list"))
+		(define (>read-yaml >$lambda)
 			(let*
 				(
-
 					($before-ending (lambda () (close-input-port (current-input-port)) (yaml_event_delete (&event)) (yaml_parser_delete (&parser))))
-
 					($error (lambda (s) (error (sprintf "You should never go into this event [~A]" s))))
 					(yaml_event_type_e ($enum '(
 						YAML_NO_EVENT
@@ -145,33 +143,39 @@
 						($before-ending)
 						(error errmessage)))
 					(else
-						(write "here")
-						(print (assoc #:string (cdr (assoc (type<- (&event)) yaml_event_type_e))))
+						(write "here") (printf "~!~A~!\n" (assoc #:string (cdr (assoc (type<- (&event)) yaml_event_type_e))))
+						(cond
+							((member (type<- (&event)) (list YAML_DOCUMENT_END_EVENT YAML_STREAM_END_EVENT))
+								(>$lambda (>read-yaml list)))
+							((= YAML_SCALAR_EVENT (type<- (&event))) (data.scalar.value<- (&event)))
 						;(let ((v ((cdr (assoc #:lambda (cdr (assoc (type<- (&event)) yaml_event_type_e))))))) (print v) v)
 						;(print (assoc #:string (cdr (assoc (type<- (&event)) yaml_event_type_e))))
-						(cond
-							((= YAML_SCALAR_EVENT (type<- (&event))) (data.scalar.value<- (&event))) ; TODO: distinguish var values
-							;((= YAML_STREAM_END_EVENT (type<- (&event))) '())
-							((or (= YAML_STREAM_START_EVENT (type<- (&event))) (= YAML_STREAM_END_EVENT (type<- (&event))))
-								(((lambda ($) ($ $))
-									(lambda (R)
-										(lambda (@)
-											(cond
-												((= YAML_STREAM_END_EVENT (type<- (&event))) (reverse @))
-												(else ((R R) (cons (>read-yaml) @)))))))
-								'()))
-							((or (= YAML_DOCUMENT_START_EVENT (type<- (&event))) (= YAML_DOCUMENT_END_EVENT (type<- (&event))))
-								(((lambda ($) ($ $))
-									(lambda (R)
-										(lambda ()
-											(cond
-												((= YAML_DOCUMENT_END_EVENT (type<- (&event))) '())
-												(else ((R R)))))))
-								))
+						;(cond
+						;	((= YAML_NO_EVENT (type<- (&event))) (error "Here is YAML_NO_EVENT, you should never go into this"))
+						;	((= YAML_SCALAR_EVENT (type<- (&event))) (data.scalar.value<- (&event))) ; TODO: distinguish var values
+						;	;((= YAML_STREAM_END_EVENT (type<- (&event))) '())
+						;	((or (= YAML_STREAM_START_EVENT (type<- (&event))) (= YAML_STREAM_END_EVENT (type<- (&event))))
+						;		(((lambda ($) ($ $))
+						;			(lambda (R)
+						;				(lambda ()
+						;					(let ((next (>read-yaml)))
+						;						(cond
+						;							((not (= YAML_STREAM_END_EVENT (type<- (&event)))) (cons next ((R R))))
+						;							(else '()))))))
+						;		))
+						;	((or (= YAML_DOCUMENT_START_EVENT (type<- (&event))) (= YAML_DOCUMENT_END_EVENT (type<- (&event))))
+						;		(((lambda ($) ($ $))
+						;			(lambda (R)
+						;				(lambda ()
+						;					(let ((next (>read-yaml)))
+						;						;next))))
+						;						(cond
+						;							((not (= YAML_DOCUMENT_END_EVENT (type<- (&event)))) next))))))
+						;		))
 						)
 					)
 				)
 			))
-			(>read-yaml)))
+			(>read-yaml (lambda (_) _))))
 
 (write (read-yaml))

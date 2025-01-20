@@ -53,7 +53,13 @@
 (define yaml_parser_delete (foreign-lambda void "yaml_parser_delete" (c-pointer "yaml_parser_t")))
 (define yaml-event->scalar.value (foreign-lambda* (c-pointer "yaml_char_t") (((c-pointer "yaml_event_t") yaml_event_p)) "C_return((yaml_event_p)->data.scalar.value);"))
 
-(define (read-yaml . <optional>)
+(define (read-yaml . >opt<)
+	(if (not (list? >opt<)) (error "Each paramter to (read-yaml) must be a key-value pair"))
+	(let ((<key> (list #:port #:encoding))) (cond
+		((not (foldr and #t (map (lambda (?) (member (car ?) <key>)) >opt<)))
+			(error
+				(sprintf "Bad paramter ~S" (flatten (map (lambda (?) (if (member (car ?) <key>) '() (car ?))) >opt<)))
+				(sprintf "Only ~S is valid" <key>)))))
 	(let*
 		(
 			(memset (foreign-lambda c-pointer "memset" c-pointer int size_t))
@@ -93,9 +99,8 @@
 				YAML_UTF16BE_ENCODING
 			)))
 		)
-		(if (not (list? <optional>)) (error "paramters to (read-yaml) must be a association list"))
-		(if (assoc #:port <optional>) (if (string? (cdr (assoc #:port <optional>))) (error "Use (open-input-string) instead")))
-		(current-input-port (if (assoc #:port <optional>) (cdr (assoc #:port <optional>)) (current-input-port)))
+		(if (assoc #:port >opt<) (if (string? (cdr (assoc #:port >opt<))) (error "Use (open-input-string) instead")))
+		(current-input-port (if (assoc #:port >opt<) (cdr (assoc #:port >opt<)) (current-input-port)))
 		(memset (&parser) 0 (foreign-type-size "yaml_parser_t"))
 		(memset (&event) 0 (foreign-type-size "yaml_event_t"))
 
@@ -103,11 +108,11 @@
 			(if (not (= 1 yaml_parser_initialize<-))
 				(error (sprintf "[~A] ~A" yaml_parser_initialize<- (error<- (&parser))))))
 		(yaml_parser_set_input_file (&parser) (current-input-port))
-		(yaml_parser_set_encoding (&parser) (if (assoc #:encoding <optional>) (cdr (assoc #:encoding <optional>)) YAML_ANY_ENCODING))
-		(if (assoc #:encoding <optional>)
+		(yaml_parser_set_encoding (&parser) (if (assoc #:encoding >opt<) (cdr (assoc #:encoding >opt<)) YAML_ANY_ENCODING))
+		(if (assoc #:encoding >opt<)
 			(assert (=
 				((foreign-lambda* yaml_encoding_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->encoding);") (&parser))
-				(cdr (assoc #:encoding <optional>)))))
+				(cdr (assoc #:encoding >opt<)))))
 		;(write (assq. #:string (assq. ((foreign-lambda* yaml_encoding_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->encoding);") (&parser)) yaml_encoding_e)))
 		(define (>read-yaml >$lambda)
 			(let*
@@ -176,6 +181,6 @@
 					)
 				)
 			))
-			(>read-yaml (lambda (_) _))))
+			(>read-yaml (lambda (?) ?))))
 
-(write (read-yaml))
+(read-yaml)

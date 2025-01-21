@@ -114,7 +114,7 @@
 				((foreign-lambda* yaml_encoding_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->encoding);") (@parser))
 				(cdr (assoc #:encoding >opt<)))))
 		;(write (assq. #:string (assq. ((foreign-lambda* yaml_encoding_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->encoding);") (@parser)) >yaml_encoding_e<)))
-		(define (&read-yaml &@ &<input> &<output>)
+		(define (&read-yaml &<input> &<output>)
 			(let*
 				(
 					(@clear (lambda () (close-input-port (current-input-port)) (yaml_event_delete (@event)) (yaml_parser_delete (@parser))))
@@ -148,15 +148,32 @@
 						(@clear)
 						(error errmessage)))
 					(else
-						(write "here") (printf "~!~A~!\n" (assoc #:string (cdr (assoc (type<- (@event)) yaml_event_type_e))))
+						(printf " $ ")
+						(write &<input>)
+						(printf " $ ")
+						(write &<output>)
+						(print "")
+						(write "here") (printf "~!~A~!" (assoc #:string (cdr (assoc (type<- (@event)) yaml_event_type_e))))
 						(cond
 							;((member (type<- (@event)) (list YAML_DOCUMENT_END_EVENT YAML_STREAM_END_EVENT))
-							;	(&@ (&read-yaml list)))
-							;((= YAML_SCALAR_EVENT (type<- (@event))) (data.scalar.value<- (@event)))
+							;	(&@ (car &<input>)))
+							((= YAML_STREAM_START_EVENT (type<- (@event))) (&read-yaml &<input> &<output>))
+							((= YAML_DOCUMENT_START_EVENT (type<- (@event))) (&read-yaml (cons '() &<input>) &<output>))
+							((= YAML_SEQUENCE_START_EVENT (type<- (@event))) (&read-yaml (cons '() &<input>) &<output>))
+							((= YAML_SCALAR_EVENT (type<- (@event)))
+								(&read-yaml
+									(cons (cons (data.scalar.value<- (@event)) (car &<input>)) (cdr &<input>))
+									&<output>
+								))
+							((= YAML_SEQUENCE_END_EVENT (type<- (@event))) (&read-yaml (cdr &<input>) (cons (cdr &<input>) &<output>)))
+							((= YAML_DOCUMENT_END_EVENT (type<- (@event))) (&read-yaml (cdr &<input>) (cons (car &<input>) &<output>)))
+							((= YAML_STREAM_END_EVENT (type<- (@event))) &<output>)
 						)
 					)
 				)
 			))
-			(&read-yaml (lambda (?) ?) '() '())))
+			(&read-yaml '() '())))
 
+(write
 (read-yaml)
+)

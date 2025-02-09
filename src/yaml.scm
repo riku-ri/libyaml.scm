@@ -147,7 +147,7 @@
 							)
 						(@clear)
 						(error errmessage))))
-				(print "") (write "here") (printf "~!~A~!" (assoc #:string (cdr (assoc (type<- (@event)) yaml_event_type_e))))
+				;(print "") (write "here") (printf "~!~A~!" (assoc #:string (cdr (assoc (type<- (@event)) yaml_event_type_e))))
 				(cond
 					((= (type<- (@event)) YAML_NO_EVENT) (@error 'YAML_NO_EVENT))
 					((= (type<- (@event)) YAML_SCALAR_EVENT) (data.scalar.value<- (@event)))
@@ -157,13 +157,44 @@
 								(let* ((next (&read-yaml)))
 								; Here use (let*) to make (&read-yaml) always be executed before recursive
 								; Note that (let*) must be in recursive definition and befor evaluate event->type
+(print "") (printf "~!~S~!" 'YAML_STREAM_START_EVENT)
 									(cond
 										((= (type<- (@event)) YAML_STREAM_END_EVENT) '())
-										(else (cons next ((@ @))))))))
-								)
+										(else
+											;(cons next ((@ @)))
+											(let ((<< (cons next ((@ @))))) (print <<) <<)
+										))))))
 						)
 					)
-				)
+					((= (type<- (@event)) YAML_DOCUMENT_START_EVENT)
+						(
+							((lambda (@) (@ @)) (lambda (@) (lambda (?)
+								(let* ((next (&read-yaml)))
+(print "") (printf "~!~S~!" 'YAML_DOCUMENT_START_EVENT)
+									(cond
+										((= (type<- (@event)) YAML_DOCUMENT_END_EVENT) ?)
+										(else
+											;((@ @) next)
+											(let ((<< ((@ @) next))) (print <<) <<)
+										))))))
+							'() ; Redundancy argument cause invoke structure. yaml-document always return its content itself
+						)
+					)
+					((= (type<- (@event)) YAML_SEQUENCE_START_EVENT)
+						(
+							((lambda (@) (@ @)) (lambda (@) (lambda ()
+								(let* ((next (&read-yaml)))
+;(printf "~!~S ~S\n~!" #:next next)
+(print "") (printf "~!~S~!" 'YAML_SEQUENCE_START_EVENT)
+									(cond
+										((= (type<- (@event)) YAML_SEQUENCE_END_EVENT) '())
+										(else
+											;(cons next ((@ @)))
+											(let ((<< (cons next ((@ @))))) (print <<) <<)
+										))))))
+						)
+					)
+				) ; (cond)
 			))
 			(&read-yaml)))
 

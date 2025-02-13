@@ -54,12 +54,13 @@
 (define yaml-event->scalar.value (foreign-lambda* (c-pointer "yaml_char_t") (((c-pointer "yaml_event_t") yaml_event_p)) "C_return((yaml_event_p)->data.scalar.value);"))
 
 (define (read-yaml . >opt<)
-	(if (not (list? >opt<)) (error "Each paramter to (read-yaml) must be a key-value pair"))
-	(let ((<key> (list #:port #:encoding))) (cond
-		((not (foldr and #t (map (lambda (?) (member (car ?) <key>)) >opt<)))
-			(error
-				(sprintf "Bad paramter ~S" (flatten (map (lambda (?) (if (member (car ?) <key>) '() (car ?))) >opt<)))
-				(sprintf "Only ~S is valid" <key>)))))
+	(let ((<key> (list #:port #:encoding)))
+		(if (not (eval `(and . ,(map pair? >opt<)))) (error (sprintf "Each paramter to (read-yaml) must be a key-value pair, key can be in ~S" <key>)))
+		(cond
+			((not (foldr and #t (map (lambda (?) (member (car ?) <key>)) >opt<)))
+				(error
+					(sprintf "Bad paramter ~S" (flatten (map (lambda (?) (if (member (car ?) <key>) '() (car ?))) >opt<)))
+					(sprintf "Only ~S is valid" <key>)))))
 	(let*
 		(
 			(memset (foreign-lambda c-pointer "memset" c-pointer int size_t))
@@ -110,10 +111,10 @@
 		(yaml_parser_set_input_file (@parser) (current-input-port))
 		(yaml_parser_set_encoding (@parser) (if (assoc #:encoding >opt<) (cdr (assoc #:encoding >opt<)) YAML_ANY_ENCODING))
 		(if (assoc #:encoding >opt<)
-			(assert (=
+			(if (not (=
 				((foreign-lambda* yaml_encoding_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->encoding);") (@parser))
-				(cdr (assoc #:encoding >opt<)))))
-		;(write (assq. #:string (assq. ((foreign-lambda* yaml_encoding_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->encoding);") (@parser)) >yaml_encoding_e<)))
+				(cdr (assoc #:encoding >opt<))))
+				(error (sprintf "~S is not in ~S" #:encoding (map (lambda (?) (cdr (assoc #:string (cdr ?)))) >yaml_encoding_e<)))))
 		(define (&read-yaml)
 			(let*
 				(
@@ -147,35 +148,34 @@
 							)
 						(@clear)
 						(error errmessage))))
-				;(print "") (write "here") (printf "~!~A~!" (assoc #:string (cdr (assoc (type<- (@event)) yaml_event_type_e))))
 				(cond
 					((= (type<- (@event)) YAML_NO_EVENT) (@error 'YAML_NO_EVENT))
 					((= (type<- (@event)) YAML_SCALAR_EVENT) (data.scalar.value<- (@event)))
 					((= (type<- (@event)) YAML_STREAM_START_EVENT)
 						(
 							((lambda (@) (@ @)) (lambda (@) (lambda ()
+;(print "") (printf "~!~S~!" 'YAML_STREAM_START_EVENT)
 								(let* ((next (&read-yaml)))
 								; Here use (let*) to make (&read-yaml) always be executed before recursive
 								; Note that (let*) must be in recursive definition and befor evaluate event->type
-(print "") (printf "~!~S~!" 'YAML_STREAM_START_EVENT)
 									(cond
 										((= (type<- (@event)) YAML_STREAM_END_EVENT) '())
 										(else
 											;(cons next ((@ @)))
-											(let ((<< (cons next ((@ @))))) (print <<) <<)
+											(let ((<< (cons next ((@ @))))) <<)
 										))))))
 						)
 					)
 					((= (type<- (@event)) YAML_DOCUMENT_START_EVENT)
 						(
 							((lambda (@) (@ @)) (lambda (@) (lambda (?)
+;(print "") (printf "~!~S~!" 'YAML_DOCUMENT_START_EVENT)
 								(let* ((next (&read-yaml)))
-(print "") (printf "~!~S~!" 'YAML_DOCUMENT_START_EVENT)
 									(cond
 										((= (type<- (@event)) YAML_DOCUMENT_END_EVENT) ?)
 										(else
 											;((@ @) next)
-											(let ((<< ((@ @) next))) (print <<) <<)
+											(let ((<< ((@ @) next))) <<)
 										))))))
 							'() ; Redundancy argument cause invoke structure. yaml-document always return its content itself
 						)
@@ -183,14 +183,14 @@
 					((= (type<- (@event)) YAML_SEQUENCE_START_EVENT)
 						(
 							((lambda (@) (@ @)) (lambda (@) (lambda ()
-								(let* ((next (&read-yaml)))
-;(printf "~!~S ~S\n~!" #:next next)
 (print "") (printf "~!~S~!" 'YAML_SEQUENCE_START_EVENT)
+								(let* ((next (&read-yaml)))
+(printf "~!~S ~S\n~!" #:next next)
 									(cond
 										((= (type<- (@event)) YAML_SEQUENCE_END_EVENT) '())
 										(else
 											;(cons next ((@ @)))
-											(let ((<< (cons next ((@ @))))) (print <<) <<)
+											(let ((<< (cons next ((@ @))))) <<)
 										))))))
 						)
 					)

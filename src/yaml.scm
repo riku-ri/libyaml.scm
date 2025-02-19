@@ -6,10 +6,6 @@
 (foreign-declare "#include <string.h>")
 (foreign-declare "#include <yaml.h>")
 
-(define (assq.  key <assq>) (cdr (assq  key <assq>))) ; TODO: Maybe test only. This definition should not be in the top-level
-(define (assv.  key <assq>) (cdr (assv  key <assq>))) ; TODO: Maybe test only. This definition should not be in the top-level
-(define (assoc. key <assq>) (cdr (assoc key <assq>))) ; TODO: Maybe test only. This definition should not be in the top-level
-
 (define-foreign-type yaml_error_type_t int)
 ; XXX: Here use int as return value is because the typedef cannot be set in (foreigin-lambda*)
 (define YAML_NO_ERROR (foreign-value "YAML_NO_ERROR" yaml_error_type_t))
@@ -63,6 +59,9 @@
 					(sprintf "Only ~S is valid" <key>)))))
 	(let*
 		(
+			(assq->  (lambda (key <assq>) (if (assq  key <assq>) (cdr (assq  key <assq>)))))
+			(assv->  (lambda (key <assq>) (if (assv  key <assq>) (cdr (assv  key <assq>)))))
+			(assoc-> (lambda (key <assq>) (if (assoc key <assq>) (cdr (assoc key <assq>)))))
 			(memset (foreign-lambda c-pointer "memset" c-pointer int size_t))
 
 			(@parser (foreign-lambda* (c-pointer "yaml_parser_t") () "static yaml_parser_t yaml_parser; C_return(&yaml_parser);"))
@@ -100,8 +99,8 @@
 				YAML_UTF16BE_ENCODING
 			)))
 		)
-		(if (assoc #:port >opt<) (if (string? (cdr (assoc #:port >opt<))) (error "Use (open-input-string) instead if you want to parse yaml from string")))
-		(current-input-port (if (assoc #:port >opt<) (cdr (assoc #:port >opt<)) (current-input-port)))
+		(if (assoc #:port >opt<) (if (string? (assoc-> #:port >opt<)) (error "Use (open-input-string) instead if you want to parse yaml from string")))
+		(current-input-port (if (assoc #:port >opt<) (assoc-> #:port >opt<) (current-input-port)))
 		(memset (@parser) 0 (foreign-type-size "yaml_parser_t"))
 		(memset (@event) 0 (foreign-type-size "yaml_event_t"))
 
@@ -109,18 +108,18 @@
 			(if (not (= 1 yaml_parser_initialize<-))
 				(error (sprintf "[~A] ~A" yaml_parser_initialize<- (error<- (@parser))))))
 		(yaml_parser_set_input_file (@parser) (current-input-port))
-		(yaml_parser_set_encoding (@parser) (if (assoc #:encoding >opt<) (cdr (assoc #:encoding >opt<)) YAML_ANY_ENCODING))
+		(yaml_parser_set_encoding (@parser) (if (assoc #:encoding >opt<) (assoc-> #:encoding >opt<) YAML_ANY_ENCODING))
 		(if (assoc #:encoding >opt<)
 			(if (not (=
 				((foreign-lambda* yaml_encoding_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->encoding);") (@parser))
-				(cdr (assoc #:encoding >opt<))))
-				(error (sprintf "~S is not in ~S" #:encoding (map (lambda (?) (cdr (assoc #:string (cdr ?)))) >yaml_encoding_e<)))))
-		(define (&read-yaml)
+				(assoc-> #:encoding >opt<)))
+				(error (sprintf "~S is not in ~A" #:encoding (map (lambda (?) (assoc-> #:string (cdr ?))) >yaml_encoding_e<)))))
+		(define (:read-yaml)
 			(let*
 				(
 					(@clear (lambda () (close-input-port (current-input-port)) (yaml_event_delete (@event)) (yaml_parser_delete (@parser))))
 					(@error (lambda (s) (error (sprintf "You should never go into this event [~A]" s))))
-					(yaml_event_type_e (@enum '(
+					(>yaml_event_type_e< (@enum '(
 						YAML_NO_EVENT
 						YAML_STREAM_START_EVENT
 						YAML_STREAM_END_EVENT
@@ -154,28 +153,24 @@
 					((= (type<- (@event)) YAML_STREAM_START_EVENT)
 						(
 							((lambda (@) (@ @)) (lambda (@) (lambda ()
-;(print "") (printf "~!~S~!" 'YAML_STREAM_START_EVENT)
-								(let* ((next (&read-yaml)))
-								; Here use (let*) to make (&read-yaml) always be executed before recursive
+								(let* ((next (:read-yaml)))
+								; Here use (let*) to make (:read-yaml) always be executed before recursive
 								; Note that (let*) must be in recursive definition and befor evaluate event->type
 									(cond
 										((= (type<- (@event)) YAML_STREAM_END_EVENT) '())
 										(else
-											;(cons next ((@ @)))
-											(let ((<< (cons next ((@ @))))) <<)
+											(cons next ((@ @)))
 										))))))
 						)
 					)
 					((= (type<- (@event)) YAML_DOCUMENT_START_EVENT)
 						(
 							((lambda (@) (@ @)) (lambda (@) (lambda (?)
-;(print "") (printf "~!~S~!" 'YAML_DOCUMENT_START_EVENT)
-								(let* ((next (&read-yaml)))
+								(let* ((next (:read-yaml)))
 									(cond
 										((= (type<- (@event)) YAML_DOCUMENT_END_EVENT) ?)
 										(else
-											;((@ @) next)
-											(let ((<< ((@ @) next))) <<)
+											((@ @) next)
 										))))))
 							'() ; Redundancy argument cause invoke structure. yaml-document always return its content itself
 						)
@@ -183,20 +178,16 @@
 					((= (type<- (@event)) YAML_SEQUENCE_START_EVENT)
 						(
 							((lambda (@) (@ @)) (lambda (@) (lambda ()
-(print "") (printf "~!~S~!" 'YAML_SEQUENCE_START_EVENT)
-								(let* ((next (&read-yaml)))
-(printf "~!~S ~S\n~!" #:next next)
+								(let* ((next (:read-yaml)))
 									(cond
 										((= (type<- (@event)) YAML_SEQUENCE_END_EVENT) '())
-										(else
-											;(cons next ((@ @)))
-											(let ((<< (cons next ((@ @))))) <<)
-										))))))
+										(else (cons next ((@ @))))
+									)))))
 						)
 					)
 				) ; (cond)
 			))
-			(&read-yaml)))
+			(:read-yaml)))
 
 (write
 (read-yaml)

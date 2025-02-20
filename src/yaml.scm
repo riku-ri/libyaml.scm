@@ -174,6 +174,7 @@
 								(else
 									; ((@ @) (:read-yaml event))
 									(error
+										(assoc-> #:string (assoc-> event >yaml_event_type_e<))
 										"YAML_DOCUMENT_END_EVENT does not appear after twice yaml_parser_parse from YAML_DOCUMENT_START_EVENT"
 										"This may be a bug in libyaml itself, it was supposed to generate a parser error here"
 									)
@@ -192,10 +193,33 @@
 										(cons (:read-yaml event) ((@ @)))
 									))))))
 					))
+				((= event YAML_MAPPING_START_EVENT)
+					(let* ((mapping
+						(
+							((lambda (@) (@ @)) (lambda (@) (lambda ()
+								(let* ((event (yaml-parser-parse (@parser) (@event))))
+									(cond
+										((= event YAML_MAPPING_END_EVENT) '())
+										(else
+											(let* ; Use (let*) to make sure value is after key
+												(
+													(k (:read-yaml event))
+													(v (:read-yaml (yaml-parser-parse (@parser) (@event))))
+												)
+												(cons (cons k v) ((@ @)))
+										)))))))
+						))) (lambda () mapping))) ; Use (lambda) to distinguish yaml-list and yaml-mapping
 			) ; (cond)
 		)
 		(:read-yaml (yaml-parser-parse (@parser) (@event)))))
 
-(write
-(read-yaml)
-)
+;(write
+;(read-yaml)
+;)
+
+;(set! yaml (read-yaml))
+;(map print
+;(list
+;(list-ref (car yaml) 0)
+;(car (car ((list-ref (car yaml) 1))))
+;))

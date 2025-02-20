@@ -156,39 +156,40 @@
 				((= event YAML_STREAM_START_EVENT)
 					(
 						((lambda (@) (@ @)) (lambda (@) (lambda ()
-							(let* ((next (:read-yaml (yaml-parser-parse (@parser) (@event)))))
+							(let* ((event (yaml-parser-parse (@parser) (@event))))
 								(cond
-									((= (type<- (@event)) YAML_STREAM_END_EVENT) '())
+									((= event YAML_STREAM_END_EVENT) '())
+									; If yaml-parser-parse is later then check YAML_SEQUENCE_END_EVENT,
+									; it will return an undefined value but not '() here
 									(else
-										(cons next ((@ @)))
+										(cons (:read-yaml event) ((@ @)))
 									))))))
 					))
 				((= event YAML_DOCUMENT_START_EVENT)
-					(let* ((next (:read-yaml (yaml-parser-parse (@parser) (@event)))))
-						; In a legal yaml content, after more once yaml_parser_parse, event must go to YAML_DOCUMENT_END_EVENT
-						(
-							((lambda (@) (@ @)) (lambda (@) (lambda ()
-								(cond
-									((= (type<- (@event)) YAML_DOCUMENT_END_EVENT) next)
-									(else
-										(yaml-parser-parse (@parser) (@event))
-										((@ @))
-									)))))
-						)))
+					(
+						((lambda (@) (@ @)) (lambda (@) (lambda (last)
+							(let* ((event (yaml-parser-parse (@parser) (@event))))
+							(cond
+								((= event YAML_DOCUMENT_END_EVENT) last)
+								(else
+									; ((@ @) (:read-yaml event))
+									(error
+										"YAML_DOCUMENT_END_EVENT does not appear after twice yaml_parser_parse from YAML_DOCUMENT_START_EVENT"
+										"This may be a bug in libyaml itself, it was supposed to generate a parser error here"
+									)
+								))))))
+						(:read-yaml (yaml-parser-parse (@parser) (@event)))
+					))
 				((= event YAML_SEQUENCE_START_EVENT)
 					(
 						((lambda (@) (@ @)) (lambda (@) (lambda ()
-							(let*
-								(
-									(event (yaml-parser-parse (@parser) (@event)))
-									; If not get event but use (type<- (@event)), all recursion will end by the most internal YAML_SEQUENCE_END_EVENT
-									; YAML_STREAM_START_EVENT has no this problem because stream would never be nested
-									(next (:read-yaml event))
-								)
+							(let* ((event (yaml-parser-parse (@parser) (@event))))
+								; If not get event but use (type<- (@event)), all recursion will end by the most internal YAML_SEQUENCE_END_EVENT
+								; YAML_STREAM_START_EVENT has no this problem because stream would never be nested
 								(cond
 									((= event YAML_SEQUENCE_END_EVENT) '())
 									(else
-										(cons next ((@ @)))
+										(cons (:read-yaml event) ((@ @)))
 									))))))
 					))
 			) ; (cond)

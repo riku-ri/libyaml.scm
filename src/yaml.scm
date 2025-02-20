@@ -76,33 +76,12 @@
 			(problem_mark.column<- (foreign-lambda* size_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->problem_mark.column);"))
 			(data.scalar.value<- (foreign-lambda* c-string (((c-pointer "yaml_event_t") _p)) "C_return((_p)->data.scalar.value);"))
 			(clear (lambda () (close-input-port (current-input-port)) (yaml_event_delete (@event)) (yaml_parser_delete (@parser))))
-			(yaml-parser-parse
-				(lambda (parser event)
-					(cond
-						((not (= (yaml_parser_parse parser event) 1)) ; According to comment in yaml.h , yaml_parser_parse() return 1 if the function succeeded
-							(let*
-								(
-									(errmessage (sprintf
-										"[~A] ~A ~A at [line:~A , colunm:~A]"
-										(error<- (@parser))
-										(problem<- (@parser))
-										(if (context<- (@parser)) (context<- (@parser)) "")
-										(+ 1 (problem_mark.line<- (@parser)))
-										(+ 1 (problem_mark.column<- (@parser)))))
-								)
-							(clear)
-							(error errmessage)
-							YAML_ERROR_EVENT))
-						(else (type<- event))
-					)))
-
 			(@enum ; construct an association list that contain (#:string . (symbol->string))
 				((lambda (@) (@ @))
 					(lambda (?) (lambda (<enum>)
 						(cond
 							((null? <enum>) '())
 							(else (cons `(,(eval (car <enum>)) (#:string . ,(symbol->string (car <enum>)))) ((? ?) (cdr <enum>)))))))))
-
 			(>yaml_error_type_e< (@enum '(
 				YAML_NO_ERROR
 				YAML_MEMORY_ERROR
@@ -132,6 +111,28 @@
 				YAML_UTF16LE_ENCODING
 				YAML_UTF16BE_ENCODING
 			)))
+			(yaml-parser-parse
+				(lambda (parser event)
+					(cond
+						((not (= (yaml_parser_parse parser event) 1)) ; According to comment in yaml.h , yaml_parser_parse() return 1 if the function succeeded
+							(let*
+								(
+									(errmessage (sprintf
+										"[~A] ~A ~A at [line:~A , colunm:~A]"
+										(error<- (@parser))
+										(problem<- (@parser))
+										(if (context<- (@parser)) (context<- (@parser)) "")
+										(+ 1 (problem_mark.line<- (@parser)))
+										(+ 1 (problem_mark.column<- (@parser)))))
+								)
+							(clear)
+							(error errmessage)
+							YAML_ERROR_EVENT))
+						(else
+							;(print (assoc-> (type<- event) >yaml_event_type_e<))
+							(type<- event)
+						)
+					)))
 		)
 		(if (assoc #:port >opt<) (if (string? (assoc-> #:port >opt<)) (error "Use (open-input-string) instead if you want to parse yaml from string")))
 		(current-input-port (if (assoc #:port >opt<) (assoc-> #:port >opt<) (current-input-port)))
@@ -148,23 +149,48 @@
 				((foreign-lambda* yaml_encoding_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->encoding);") (@parser))
 				(assoc-> #:encoding >opt<)))
 				(error (sprintf "~S is not in ~A" #:encoding (map (lambda (?) (assoc-> #:string (cdr ?))) >yaml_encoding_e<)))))
-		(define (:read-yaml :event)
+		(define (:read-yaml event)
 			(cond
-				;((= :event YAML_NO_EVENT) (@error 'YAML_NO_EVENT))
-				;((= :event YAML_SCALAR_EVENT) (data.scalar.value<- (@event)))
-				((member :event (list YAML_STREAM_START_EVENT))
+				((= (type<- (@event)) YAML_NO_EVENT) (error (sprintf "You should never go into this event ~S" 'YAML_NO_EVENT)))
+				((= event YAML_SCALAR_EVENT) (data.scalar.value<- (@event)))
+				((= event YAML_STREAM_START_EVENT)
 					(
 						((lambda (@) (@ @)) (lambda (@) (lambda ()
 							(let* ((next (:read-yaml (yaml-parser-parse (@parser) (@event)))))
-							; Here use (let*) to make (:read-yaml) always be executed before recursive
-							; Note that (let*) must be in recursive definition and befor evaluate event->type
 								(cond
 									((= (type<- (@event)) YAML_STREAM_END_EVENT) '())
 									(else
 										(cons next ((@ @)))
 									))))))
-					)
-				)
+					))
+				((= event YAML_DOCUMENT_START_EVENT)
+					(let* ((next (:read-yaml (yaml-parser-parse (@parser) (@event)))))
+						; In a legal yaml content, after more once yaml_parser_parse, event must go to YAML_DOCUMENT_END_EVENT
+						(
+							((lambda (@) (@ @)) (lambda (@) (lambda ()
+								(cond
+									((= (type<- (@event)) YAML_DOCUMENT_END_EVENT) next)
+									(else
+										(yaml-parser-parse (@parser) (@event))
+										((@ @))
+									)))))
+						)))
+				((= event YAML_SEQUENCE_START_EVENT)
+					(
+						((lambda (@) (@ @)) (lambda (@) (lambda ()
+							(let*
+								(
+									(event (yaml-parser-parse (@parser) (@event)))
+									; If not get event but use (type<- (@event)), all recursion will end by the most internal YAML_SEQUENCE_END_EVENT
+									; YAML_STREAM_START_EVENT has no this problem because stream would never be nested
+									(next (:read-yaml event))
+								)
+								(cond
+									((= event YAML_SEQUENCE_END_EVENT) '())
+									(else
+										(cons next ((@ @)))
+									))))))
+					))
 			) ; (cond)
 		)
 		(:read-yaml (yaml-parser-parse (@parser) (@event)))))

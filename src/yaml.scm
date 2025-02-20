@@ -60,9 +60,6 @@
 					(sprintf "Only ~S is valid" <key>)))))
 	(let*
 		(
-			(assq->  (lambda (key <assq>) (if (assq  key <assq>) (cdr (assq  key <assq>)))))
-			(assv->  (lambda (key <assq>) (if (assv  key <assq>) (cdr (assv  key <assq>)))))
-			(assoc-> (lambda (key <assq>) (if (assoc key <assq>) (cdr (assoc key <assq>)))))
 			(memset (foreign-lambda c-pointer "memset" c-pointer int size_t))
 
 			(@parser (foreign-lambda* (c-pointer "yaml_parser_t") () "static yaml_parser_t yaml_parser; C_return(&yaml_parser);"))
@@ -129,13 +126,13 @@
 							(error errmessage)
 							YAML_ERROR_EVENT))
 						(else
-							;(print (assoc-> (type<- event) >yaml_event_type_e<))
+							;(print (cdr (assoc (type<- event) >yaml_event_type_e<)))
 							(type<- event)
 						)
 					)))
 		)
-		(if (assoc #:port >opt<) (if (string? (assoc-> #:port >opt<)) (error "Use (open-input-string) instead if you want to parse yaml from string")))
-		(current-input-port (if (assoc #:port >opt<) (assoc-> #:port >opt<) (current-input-port)))
+		(if (assoc #:port >opt<) (if (string? (cdr (assoc #:port >opt<))) (error "Use (open-input-string) instead if you want to parse yaml from string")))
+		(current-input-port (if (assoc #:port >opt<) (cdr (assoc #:port >opt<)) (current-input-port)))
 		(memset (@parser) 0 (foreign-type-size "yaml_parser_t"))
 		(memset (@event) 0 (foreign-type-size "yaml_event_t"))
 
@@ -143,12 +140,12 @@
 			(if (not (= 1 yaml_parser_initialize<-))
 				(error (sprintf "[~A] ~A" yaml_parser_initialize<- (error<- (@parser))))))
 		(yaml_parser_set_input_file (@parser) (current-input-port))
-		(yaml_parser_set_encoding (@parser) (if (assoc #:encoding >opt<) (assoc-> #:encoding >opt<) YAML_ANY_ENCODING))
+		(yaml_parser_set_encoding (@parser) (if (assoc #:encoding >opt<) (cdr (assoc #:encoding >opt<)) YAML_ANY_ENCODING))
 		(if (assoc #:encoding >opt<)
 			(if (not (=
 				((foreign-lambda* yaml_encoding_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->encoding);") (@parser))
-				(assoc-> #:encoding >opt<)))
-				(error (sprintf "~S is not in ~A" #:encoding (map (lambda (?) (assoc-> #:string (cdr ?))) >yaml_encoding_e<)))))
+				(cdr (assoc #:encoding >opt<))))
+				(error (sprintf "~S is not in ~A" #:encoding (map (lambda (?) (cdr (assoc #:string (cdr ?)))) >yaml_encoding_e<)))))
 		(define (:read-yaml event)
 			(cond
 				((= (type<- (@event)) YAML_NO_EVENT) (error (sprintf "You should never go into this event ~S" 'YAML_NO_EVENT)))
@@ -174,7 +171,7 @@
 								(else
 									; ((@ @) (:read-yaml event))
 									(error
-										(assoc-> #:string (assoc-> event >yaml_event_type_e<))
+										(cdr (assoc #:string (cdr (assoc event >yaml_event_type_e<))))
 										"YAML_DOCUMENT_END_EVENT does not appear after twice yaml_parser_parse from YAML_DOCUMENT_START_EVENT"
 										"This may be a bug in libyaml itself, it was supposed to generate a parser error here"
 									)

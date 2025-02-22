@@ -50,9 +50,9 @@
 (define yaml_parser_delete (foreign-lambda void "yaml_parser_delete" (c-pointer "yaml_parser_t")))
 (define yaml-event->scalar.value (foreign-lambda* (c-pointer "yaml_char_t") (((c-pointer "yaml_event_t") yaml_event_p)) "C_return((yaml_event_p)->data.scalar.value);"))
 
-(define (read-yaml . >opt<)
+(define (libyaml:read-port . >opt<)
 	(let ((<key> (list #:port #:encoding)))
-		(if (not (eval `(and . ,(map pair? >opt<)))) (error (sprintf "Each paramter to (read-yaml) must be a key-value pair, key can be in ~S" <key>)))
+		(if (not (eval `(and . ,(map pair? >opt<)))) (error (sprintf "Each paramter to (libyaml:read-port) must be a key-value pair, key can be in ~S" <key>)))
 		(cond
 			((not (foldr and #t (map (lambda (?) (member (car ?) <key>)) >opt<)))
 				(error
@@ -146,7 +146,7 @@
 				((foreign-lambda* yaml_encoding_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->encoding);") (@parser))
 				(cdr (assoc #:encoding >opt<))))
 				(error (sprintf "~S is not in ~A" #:encoding (map (lambda (?) (cdr (assoc #:string (cdr ?)))) >yaml_encoding_e<)))))
-		(define (:read-yaml event)
+		(define (:libyaml:read-port event)
 			(cond
 				((= (type<- (@event)) YAML_NO_EVENT) (error (sprintf "You should never go into this event ~S" 'YAML_NO_EVENT)))
 				((= event YAML_SCALAR_EVENT) (data.scalar.value<- (@event)))
@@ -159,7 +159,7 @@
 									; If yaml-parser-parse is later then check YAML_SEQUENCE_END_EVENT,
 									; it will return an undefined value but not '() here
 									(else
-										(cons (:read-yaml event) ((@ @)))
+										(cons (:libyaml:read-port event) ((@ @)))
 									))))))
 					))
 				((= event YAML_DOCUMENT_START_EVENT)
@@ -169,14 +169,14 @@
 							(cond
 								((= event YAML_DOCUMENT_END_EVENT) last)
 								(else
-									; ((@ @) (:read-yaml event))
+									; ((@ @) (:libyaml:read-port event))
 									(error
 										(cdr (assoc #:string (cdr (assoc event >yaml_event_type_e<))))
 										"YAML_DOCUMENT_END_EVENT does not appear after twice yaml_parser_parse from YAML_DOCUMENT_START_EVENT"
 										"This may be a bug in libyaml itself, it was supposed to generate a parser error here"
 									)
 								))))))
-						(:read-yaml (yaml-parser-parse (@parser) (@event)))
+						(:libyaml:read-port (yaml-parser-parse (@parser) (@event)))
 					))
 				((= event YAML_SEQUENCE_START_EVENT)
 					(
@@ -187,7 +187,7 @@
 								(cond
 									((= event YAML_SEQUENCE_END_EVENT) '())
 									(else
-										(cons (:read-yaml event) ((@ @)))
+										(cons (:libyaml:read-port event) ((@ @)))
 									))))))
 					))
 				((= event YAML_MAPPING_START_EVENT)
@@ -200,21 +200,21 @@
 										(else
 											(let* ; Use (let*) to make sure value is after key
 												(
-													(k (:read-yaml event))
-													(v (:read-yaml (yaml-parser-parse (@parser) (@event))))
+													(k (:libyaml:read-port event))
+													(v (:libyaml:read-port (yaml-parser-parse (@parser) (@event))))
 												)
 												(cons (cons k v) ((@ @)))
 										)))))))
 						))) (lambda () mapping))) ; Use (lambda) to distinguish yaml-list and yaml-mapping
 			) ; (cond)
 		)
-		(:read-yaml (yaml-parser-parse (@parser) (@event)))))
+		(:libyaml:read-port (yaml-parser-parse (@parser) (@event)))))
 
 ;(write
-;(read-yaml)
+;(libyaml:read-port)
 ;)
 
-;(set! yaml (read-yaml))
+;(set! yaml (libyaml:read-port))
 ;(map print
 ;(list
 ;(list-ref (car yaml) 0)

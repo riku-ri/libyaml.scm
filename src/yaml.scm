@@ -149,7 +149,7 @@
 		(define (:libyaml:read-port event)
 			(cond
 				((= (type<- (@event)) YAML_NO_EVENT) (error (sprintf "You should never go into this event ~S" 'YAML_NO_EVENT)))
-				((= event YAML_SCALAR_EVENT) (data.scalar.value<- (@event)))
+				((= event YAML_SCALAR_EVENT) (let* ((<< (data.scalar.value<- (@event)))) <<))
 				((= event YAML_STREAM_START_EVENT)
 					(
 						((lambda (@) (@ @)) (lambda (@) (lambda ()
@@ -159,7 +159,7 @@
 									; If yaml-parser-parse is later then check YAML_SEQUENCE_END_EVENT,
 									; it will return an undefined value but not '() here
 									(else
-										(cons (:libyaml:read-port event) ((@ @)))
+										(let* ((<< (cons (:libyaml:read-port event) ((@ @))))) <<)
 									))))))
 					))
 				((= event YAML_DOCUMENT_START_EVENT)
@@ -176,7 +176,7 @@
 										"This may be a bug in libyaml itself, it was supposed to generate a parser error here"
 									)
 								))))))
-						(:libyaml:read-port (yaml-parser-parse (@parser) (@event)))
+						(let* ((<< (:libyaml:read-port (yaml-parser-parse (@parser) (@event))))) <<)
 					))
 				((= event YAML_SEQUENCE_START_EVENT)
 					(
@@ -187,7 +187,7 @@
 								(cond
 									((= event YAML_SEQUENCE_END_EVENT) '())
 									(else
-										(cons (:libyaml:read-port event) ((@ @)))
+										(let* ((<< (cons (:libyaml:read-port event) ((@ @))))) <<)
 									))))))
 					))
 				((= event YAML_MAPPING_START_EVENT)
@@ -203,7 +203,7 @@
 													(k (:libyaml:read-port event))
 													(v (:libyaml:read-port (yaml-parser-parse (@parser) (@event))))
 												)
-												(cons (cons k v) ((@ @)))
+												(let* ((<< (cons (cons k v) ((@ @))))) <<)
 										)))))))
 						))) (lambda () mapping))) ; Use (lambda) to distinguish yaml-list and yaml-mapping
 			) ; (cond)

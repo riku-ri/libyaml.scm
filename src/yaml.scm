@@ -1,5 +1,6 @@
 (import scheme)
 (import (chicken foreign))
+(import (chicken keyword))
 (import (chicken format))
 (import (chicken irregex))
 
@@ -50,14 +51,24 @@
 (define yaml_parser_delete (foreign-lambda void "yaml_parser_delete" (c-pointer "yaml_parser_t")))
 (define yaml-event->scalar.value (foreign-lambda* (c-pointer "yaml_char_t") (((c-pointer "yaml_event_t") yaml_event_p)) "C_return((yaml_event_p)->data.scalar.value);"))
 
-(define (libyaml:read-port . >opt<)
-	(let ((<key> (list #:port #:encoding)))
-		(if (not (eval `(and . ,(map pair? >opt<)))) (error (sprintf "Each paramter to (libyaml:read-port) must be a key-value pair, key can be in ~S" <key>)))
+(define (argparse <> <without-value> <with-value>)
+	(if (not (list? <>)) (error "argument is not a list" <>))
+	(define (:argparse <> <arg> >arg<)
 		(cond
-			((not (foldr and #t (map (lambda (?) (member (car ?) <key>)) >opt<)))
-				(error
-					(sprintf "Bad paramter ~S" (flatten (map (lambda (?) (if (member (car ?) <key>) '() (car ?))) >opt<)))
-					(sprintf "Only ~S is valid" <key>)))))
+			((null? <>) (cons <arg> >arg<))
+			((keyword? (car <>))
+				(if (not (member (car <>) <without-value>))
+					(error (sprintf "without-value option not in ~S" <without-value>) (car <>)))
+				(:argparse (cdr <>) (cons (car <>) <arg>) >arg<))
+			((pair? (car <>))
+				(if (not (member (car (car <>)) <with-value>))
+					(error (sprintf "with-value option is not in ~S" <with-value>) (car (car <>))))
+				(:argparse (cdr <>) <arg> (cons (car <>) >arg<)))
+			(else (error "argument unit is not keyword or key-value pair" (car <>)))))
+	(:argparse <> '() '()))
+
+(define (libyaml:read-port . >argparse<) ; TODO anchor
+	(define >< (argparse >argparse< '() (list #:port #:encoding)))
 	(let*
 		(
 			(memset (foreign-lambda c-pointer "memset" c-pointer int size_t))
@@ -131,8 +142,8 @@
 						)
 					)))
 		)
-		(if (assoc #:port >opt<) (if (string? (cdr (assoc #:port >opt<))) (error "Use (open-input-string) instead if you want to parse yaml from string")))
-		(current-input-port (if (assoc #:port >opt<) (cdr (assoc #:port >opt<)) (current-input-port)))
+		(if (assoc #:port (cdr ><)) (if (string? (cdr (assoc #:port (cdr ><)))) (error "Use (open-input-string) instead if you want to parse yaml from string")))
+		(current-input-port (if (assoc #:port (cdr ><)) (cdr (assoc #:port (cdr ><))) (current-input-port)))
 		(memset (@parser) 0 (foreign-type-size "yaml_parser_t"))
 		(memset (@event) 0 (foreign-type-size "yaml_event_t"))
 
@@ -140,11 +151,11 @@
 			(if (not (= 1 yaml_parser_initialize<-))
 				(error (sprintf "[~A] ~A" yaml_parser_initialize<- (error<- (@parser))))))
 		(yaml_parser_set_input_file (@parser) (current-input-port))
-		(yaml_parser_set_encoding (@parser) (if (assoc #:encoding >opt<) (cdr (assoc #:encoding >opt<)) YAML_ANY_ENCODING))
-		(if (assoc #:encoding >opt<)
+		(yaml_parser_set_encoding (@parser) (if (assoc #:encoding (cdr ><)) (cdr (assoc #:encoding (cdr ><))) YAML_ANY_ENCODING))
+		(if (assoc #:encoding (cdr ><))
 			(if (not (=
 				((foreign-lambda* yaml_encoding_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->encoding);") (@parser))
-				(cdr (assoc #:encoding >opt<))))
+				(cdr (assoc #:encoding (cdr ><)))))
 				(error (sprintf "~S is not in ~A" #:encoding (map (lambda (?) (cdr (assoc #:string (cdr ?)))) >yaml_encoding_e<)))))
 		(define (:libyaml:read-port event)
 			(cond
@@ -210,9 +221,39 @@
 		)
 		(:libyaml:read-port (yaml-parser-parse (@parser) (@event)))))
 
-;(write
-;(libyaml:read-port)
-;)
+(define (libyaml:dump . >yaml-with-argparse<)
+	(if (null? >yaml-with-argparse<) (error "no yaml provided"))
+	(define yaml (car >yaml-with-argparse<))
+	(define >< (argparse (cdr >yaml-with-argparse<) '(#:string #:oneline) '(#:port #:indent)))
+	(current-output-port (if (assoc #:port (cdr ><)) (cdr (assoc #:port (cdr ><))) (current-output-port)))
+	(define indent
+		(if (assoc #:indent (cdr ><))
+			(let ((indent (cdr (assoc #:indent (cdr ><)))))
+				(cond
+					((integer? indent) (make-string indent #\space))
+					((string? indent) indent)
+					(else (error "indent is not indent size or indent string" indent))))
+			(make-string 2 #\space)))
+	(define (<libyaml:dump-document> yaml indent-level)
+		(define :indent (((lambda (@) (@ @)) (lambda (@) (lambda (n) (if (= 0 n) "" (string-append indent ((@ @) (- n 1))))))) indent-level))
+		(cond
+			((procedure? yaml) (let* ; ERROR here mapping is not key-value pair but list of it
+				(
+					(mapping (yaml))
+					(k (<libyaml:dump-document> (car mapping) indent-level))
+					(v (<libyaml:dump-document> (cdr mapping) (+ indent-level 1)))
+				)
+				(if (member #:oneline (car ><))
+					(sprintf "{~A: ~A}" k v)
+					(sprintf "~A:\n~A" k v))))
+			((list? yaml) (let ((l (map (lambda (?) (<libyaml:dump-document> ? (+ indent-level 1))) yaml)))
+				(if (member #:oneline (car ><))
+					(string-append "[" (foldl string-append "" (join (map list l) (list ","))) "]")
+					(eval (cons string-append (join (map list (map (lambda (?) (string-append :indent "- " ?)) l)) '("\n")))))))
+			(else (sprintf "~S" yaml)))) ; TODO: multiline string
+	(eval (cons string-append (join (map list (map (lambda (?) (string-append "---" "\n" ? "\n" "...")) (map (lambda (?) (<libyaml:dump-document> ? 0)) yaml))) '("\n")))))
+(define yaml (libyaml:read-port))
+(print (libyaml:dump yaml))
 
 ;(set! yaml (libyaml:read-port))
 ;(map print

@@ -321,11 +321,46 @@
 		)
 		(:libyaml:read (yaml-parser-parse (&parser) (&event)))))
 
-(define (libyaml:fixed-mapping yaml)
-	(cond
-		((list? yaml) (map libyaml:fixed-mapping yaml))
-		((pair? yaml) (cons (libyaml:fixed-mapping (car yaml)) (libyaml:fixed-mapping (cdr yaml))))
-		(else (if (procedure? yaml) (libyaml:fixed-mapping (yaml)) yaml))))
+;(define (libyaml:fixed-mapping yaml)
+;	(cond
+;		((list? yaml) (map libyaml:fixed-mapping yaml))
+;		((pair? yaml) (cons (libyaml:fixed-mapping (car yaml)) (libyaml:fixed-mapping (cdr yaml))))
+;		(else (if (procedure? yaml) (libyaml:fixed-mapping (yaml)) yaml))))
+
+(define (libyaml:ordered-mapping . yaml><)
+	(if (null? yaml><) (error "no yaml provided"))
+	(define yaml (car yaml><))
+	(define >< (argparse (cdr yaml><) '() '(#:switch)))
+	(let
+		(
+			(switch (if (assoc #:switch (cdr ><))
+				(cdr ><)
+				(lambda (l r) (string>? (sprintf "~S" (car l)) (sprintf "~S" (car r))))))
+		)
+
+		; ERR: this sort has error:
+			; for a document of mapping '(#<procedure>)
+			; (sort (car yaml) (cdr yaml) '()) will send (cdr '(#<procedure>)) i.e. null directly
+		(define (sort <>)
+			(define (:sort ^ ... <<)
+				(cond
+					((null? ...) (cons ^ <<))
+					(else
+						(if (switch ^ (car ...))
+							(:sort (car ...) (cdr ...) (cons ^ <<))
+							(:sort ^ (cdr ...) (cons (car ...) <<))))))
+			(if (null? <>) <> (:sort (car <>) (cdr <>) '())))
+		(define (:libyaml:ordered-mapping yaml)
+			(cond
+				((null? yaml) '())
+				((list? yaml) (map :libyaml:ordered-mapping yaml))
+				((pair? yaml) (cons (:libyaml:ordered-mapping (car yaml)) (:libyaml:ordered-mapping (cdr yaml))))
+				(else (if (procedure? yaml)
+					(let ((yaml (yaml)))
+						(:libyaml:ordered-mapping (sort yaml)))
+					yaml))))
+		(:libyaml:ordered-mapping yaml)
+))
 
 (define (libyaml:dump . yaml><)
 	(if (null? yaml><) (error "no yaml provided"))
@@ -357,10 +392,10 @@
 			(flatten (join (map list (map :libyaml:dump-document yaml)) '("..." "---")))
 			(if (or (> (length yaml) 1) (member #:1-document-wrap (car ><))) '("...") '()))))
 
-;(define yaml (libyaml:read))
+(define yaml (libyaml:read))
 ;(write/ yaml)
 ;(write/
 ;;(libyaml:dump yaml #:1-document-wrap)
 ;(libyaml:dump yaml)
 ;)
-;(write/ (libyaml:fixed-mapping yaml))
+(write/ (libyaml:ordered-mapping yaml))

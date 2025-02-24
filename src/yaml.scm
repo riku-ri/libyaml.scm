@@ -13,7 +13,6 @@
 ;(define-foreign-type bool int (lambda (?) (if ? 1 0)) (lambda (?) (if (= ? 0) #f #t)))
 ; foreign-type bool had been defined in chicken
 
-(define NULL (foreign-value "NULL" c-pointer))
 (define YAML_NO_ERROR (foreign-value "YAML_NO_ERROR" yaml_error_type_t))
 (define YAML_MEMORY_ERROR (foreign-value "YAML_MEMORY_ERROR" yaml_error_type_t))
 (define YAML_READER_ERROR (foreign-value "YAML_READER_ERROR" yaml_error_type_t))
@@ -43,8 +42,6 @@
 (define YAML_MAPPING_START_EVENT (foreign-value "(YAML_MAPPING_START_EVENT)" yaml_event_type_t))
 (define YAML_MAPPING_END_EVENT (foreign-value "(YAML_MAPPING_END_EVENT)" yaml_event_type_t))
 
-(define-foreign-type yaml_scalar_style_t int)
-
 (define yaml_parser_set_encoding (foreign-lambda void "yaml_parser_set_encoding" (c-pointer "yaml_parser_t") yaml_encoding_t))
 (define yaml_parser_initialize (foreign-lambda int "yaml_parser_initialize" (c-pointer "yaml_parser_t")))
 (define yaml_parser_set_input_file (foreign-lambda void "yaml_parser_set_input_file" (c-pointer "yaml_parser_t") (c-pointer "FILE")))
@@ -52,7 +49,6 @@
 (define yaml_parser_parse (foreign-lambda int "yaml_parser_parse" (c-pointer "yaml_parser_t") (c-pointer "yaml_event_t")))
 (define yaml_event_delete (foreign-lambda void "yaml_event_delete" (c-pointer "yaml_event_t")))
 (define yaml_parser_delete (foreign-lambda void "yaml_parser_delete" (c-pointer "yaml_parser_t")))
-(define yaml-event->scalar.value (foreign-lambda* (c-pointer "yaml_char_t") (((c-pointer "yaml_event_t") yaml_event_p)) "C_return((yaml_event_p)->data.scalar.value);"))
 
 (define (argparse <> <without-value> <with-value>)
 	(if (not (list? <>)) (error "argument is not a list" <>))
@@ -70,28 +66,43 @@
 			(else (error "argument unit is not keyword or key-value pair" (car <>)))))
 	(:argparse <> '() '()))
 
-(define-syntax *-> (syntax-rules () ((*-> type-string pointer to-access ... return-type) ((foreign-lambda* return-type (((c-pointer type-string) _p)) "C_return((_p)->" to-access ... ");") pointer))))
-
+(define-syntax *->
+	(syntax-rules ()
+		((*-> type-string pointer to-access ... return-type)
+			(
+				(foreign-lambda* return-type (((c-pointer type-string) _p))
+					"C_return((_p)->" to-access ... ");")
+				pointer
+			))))
 (define (libyaml:fixed-mapping yaml)
 	(cond
 		((list? yaml) (map libyaml:fixed-mapping yaml))
 		((pair? yaml) (cons (libyaml:fixed-mapping (car yaml)) (libyaml:fixed-mapping (cdr yaml))))
 		(else (if (procedure? yaml) (libyaml:fixed-mapping (yaml)) yaml))))
-(define (libyaml:read . >argparse<) ; TODO anchor
-	(define >< (argparse >argparse< '() (list #:input #:encoding)))
+(define (libyaml:read . ><) ; TODO anchor
+	(set! >< (argparse >< '() (list #:input #:encoding)))
 	(let*
 		(
-			(string->number (lambda (?) (if (string->number ?) (string->number ?) (error "(string->number) convert error" ?))))
+			(string->number (lambda (?)
+				(if (string->number ?)
+					(string->number ?)
+					(error "(string->number) convert error" ?))))
 			(memset (foreign-lambda c-pointer "memset" c-pointer int size_t))
-			(&parser (foreign-lambda* (c-pointer "yaml_parser_t") () "static yaml_parser_t yaml_parser; C_return(&yaml_parser);"))
-			(&event (foreign-lambda* (c-pointer "yaml_event_t") () "static yaml_event_t yaml_event; C_return(&yaml_event);"))
-			(clear (lambda () (close-input-port (current-input-port)) (yaml_event_delete (&event)) (yaml_parser_delete (&parser))))
+			(&parser (foreign-lambda* (c-pointer "yaml_parser_t") ()
+				"static yaml_parser_t yaml_parser; C_return(&yaml_parser);"))
+			(&event (foreign-lambda* (c-pointer "yaml_event_t") ()
+				"static yaml_event_t yaml_event; C_return(&yaml_event);"))
+			(clear (lambda ()
+				(close-input-port (current-input-port))
+				(yaml_event_delete (&event)) (yaml_parser_delete (&parser))))
 			(@enum ; construct an association list that contain (#:string . (symbol->string))
 				((lambda (@) (@ @))
 					(lambda (?) (lambda (<enum>)
 						(cond
 							((null? <enum>) '())
-							(else (cons `(,(eval (car <enum>)) (#:string . ,(symbol->string (car <enum>)))) ((? ?) (cdr <enum>)))))))))
+							(else (cons
+								`(,(eval (car <enum>)) (#:string . ,(symbol->string (car <enum>))))
+								((? ?) (cdr <enum>)))))))))
 			(c-string-or-empty (lambda (tocheck) (let* ((str tocheck)) (if str str ""))))
 			(>yaml_error_type_e< (@enum '(
 				YAML_NO_ERROR
@@ -125,7 +136,8 @@
 			(yaml-parser-parse
 				(lambda (parser event)
 					(cond
-						((not (= (yaml_parser_parse parser event) 1)) ; According to comment in yaml.h , yaml_parser_parse() return 1 if the function succeeded
+						((not (= (yaml_parser_parse parser event) 1))
+						; According to comment in yaml.h , yaml_parser_parse() return 1 if the function succeeded
 							(let*
 								(
 									(errmessage
@@ -157,15 +169,26 @@
 		(if (assoc #:input (cdr ><))
 			(let ((input (cdr (assoc #:input (cdr ><)))))
 				(cond
-					((string? input) (yaml_parser_set_input_string (&parser) input (string-length input)))
+					((string? input)
+						(yaml_parser_set_input_string (&parser) input (string-length input)))
 					((input-port? input) (yaml_parser_set_input_file (&parser) input))))
 			(yaml_parser_set_input_file (&parser) (current-input-port)))
-		(yaml_parser_set_encoding (&parser) (if (assoc #:encoding (cdr ><)) (cdr (assoc #:encoding (cdr ><))) YAML_ANY_ENCODING))
+		(yaml_parser_set_encoding
+			(&parser)
+			(if (assoc #:encoding (cdr ><))
+				(cdr (assoc #:encoding (cdr ><)))
+				YAML_ANY_ENCODING))
 		(if (assoc #:encoding (cdr ><))
-			(if (not (=
-				((foreign-lambda* yaml_encoding_t (((c-pointer "yaml_parser_t") _p)) "C_return((_p)->encoding);") (&parser))
+			(if (not (= (
+					(foreign-lambda* yaml_encoding_t (((c-pointer "yaml_parser_t") _p))
+						"C_return((_p)->encoding);")
+					(&parser))
 				(cdr (assoc #:encoding (cdr ><)))))
-				(error (sprintf "~S is not in ~A" #:encoding (map (lambda (?) (cdr (assoc #:string (cdr ?)))) >yaml_encoding_e<)))))
+				(error (sprintf "~S is not in ~A"
+					#:encoding
+					(map
+						(lambda (?) (cdr (assoc #:string (cdr ?))))
+						>yaml_encoding_e<)))))
 		(set! <anchor> (list))
 		(define (:libyaml:read event)
 			(if
@@ -174,15 +197,14 @@
 					(*-> "yaml_event_t" (&event) "data.sequence_start.tag" c-string)
 					(*-> "yaml_event_t" (&event) "data.mapping_start.tag" c-string)
 				)
-				(warning
-					(sprintf
-						"tag at [line:~A , colunm:~A]"
-						(+ 1 (*-> "yaml_event_t" (&event) "start_mark.line" size_t))
-						(+ 1 (*-> "yaml_event_t" (&event) "start_mark.column" size_t)))
-						"all tags tag will be ignored and always return the literal value"))
+				(warning (sprintf "tag at [line:~A , colunm:~A]"
+					(+ 1 (*-> "yaml_event_t" (&event) "start_mark.line" size_t))
+					(+ 1 (*-> "yaml_event_t" (&event) "start_mark.column" size_t)))
+					"all tags tag will be ignored and always return the literal value"))
 			(cond
 				((= event YAML_NO_EVENT)
-					(error (sprintf "You should never go into this event ~S" 'YAML_NO_EVENT)))
+					(error (sprintf "You should never go into this event ~S"
+						'YAML_NO_EVENT)))
 				((= event YAML_ALIAS_EVENT)
 					(let
 						(
@@ -302,45 +324,16 @@
 		)
 		(:libyaml:read (yaml-parser-parse (&parser) (&event)))))
 
-(define (libyaml:dump . >yaml-with-argparse<)
-	(if (null? >yaml-with-argparse<) (error "no yaml provided"))
-	(define yaml (car >yaml-with-argparse<))
-	(define >< (argparse (cdr >yaml-with-argparse<) '(#:string #:oneline) '(#:port #:indent)))
-	(current-output-port (if (assoc #:port (cdr ><)) (cdr (assoc #:port (cdr ><))) (current-output-port)))
-	(define indent
-		(if (assoc #:indent (cdr ><))
-			(let ((indent (cdr (assoc #:indent (cdr ><)))))
-				(cond
-					((integer? indent) (make-string indent #\space))
-					((string? indent) indent)
-					(else (error "indent is not indent size or indent string" indent))))
-			(make-string 2 #\space)))
-	(define (<libyaml:dump-document> yaml indent-level)
-		(define :indent (((lambda (@) (@ @)) (lambda (@) (lambda (n) (if (= 0 n) "" (string-append indent ((@ @) (- n 1))))))) indent-level))
+(define (libyaml:dump . >^<)
+	(if (null? >^<) (error "no yaml provided"))
+	(set! ^ (car >^<))
+	(set! >< (argparse (cdr >^<) '(#:string #:oneline) '(#:port #:indent)))
+	(define (:libyaml:dump-document yaml)
 		(cond
-			((procedure? yaml) (let* ; ERROR here mapping is not key-value pair but list of it
-				(
-					(mapping (yaml))
-					(k (<libyaml:dump-document> (car mapping) indent-level))
-					(v (<libyaml:dump-document> (cdr mapping) (+ indent-level 1)))
-				)
-				(if (member #:oneline (car ><))
-					(sprintf "{~A: ~A}" k v)
-					(sprintf "~A:\n~A" k v))))
-			((list? yaml) (let ((l (map (lambda (?) (<libyaml:dump-document> ? (+ indent-level 1))) yaml)))
-				(if (member #:oneline (car ><))
-					(string-append "[" (foldl string-append "" (join (map list l) (list ","))) "]")
-					(eval (cons string-append (join (map list (map (lambda (?) (string-append :indent "- " ?)) l)) '("\n")))))))
-			(else (sprintf "~S" yaml)))) ; TODO: multiline string
-	(eval (cons string-append (join (map list (map (lambda (?) (string-append "---" "\n" ? "\n" "...")) (map (lambda (?) (<libyaml:dump-document> ? 0)) yaml))) '("\n")))))
-
-;(define yaml (libyaml:fixed-mapping (libyaml:read)))
+			((procedure? yaml) '())
+			((list yaml) '())
+			(else '())
+		)))
+(set! yaml (libyaml:fixed-mapping (libyaml:read)))
 ;(write yaml)
-;(print (libyaml:dump yaml))
-
-;(set! yaml (libyaml:read))
-;(map print
-;(list
-;(list-ref (car yaml) 0)
-;(car (car ((list-ref (car yaml) 1))))
-;))
+(libyaml:dump yaml)

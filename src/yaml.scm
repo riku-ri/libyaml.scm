@@ -338,9 +338,6 @@
 				(lambda (l r) (string>? (sprintf "~S" (car l)) (sprintf "~S" (car r))))))
 		)
 
-		; ERR: this sort has error:
-			; for a document of mapping '(#<procedure>)
-			; (sort (car yaml) (cdr yaml) '()) will send (cdr '(#<procedure>)) i.e. null directly
 		(define (sort <>)
 			(define (:sort ^ ... <<)
 				(cond

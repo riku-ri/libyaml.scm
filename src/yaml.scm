@@ -50,6 +50,7 @@
 (define yaml_event_delete (foreign-lambda void "yaml_event_delete" (c-pointer "yaml_event_t")))
 (define yaml_parser_delete (foreign-lambda void "yaml_parser_delete" (c-pointer "yaml_parser_t")))
 
+(define-syntax write/ (syntax-rules () ((write/ towrite ...) (let () (write towrite ...) (print "")))))
 (define (argparse <> <without-value> <with-value>)
 	(if (not (list? <>)) (error "argument is not a list" <>))
 	(define (:argparse <> <arg> >arg<)
@@ -318,12 +319,12 @@
 													(let ((<< (cons (cons k v) ((@ @))))) <<)
 											)))))))))
 						)
-						(if anchor (if (not (assoc anchor <anchor>)) (set! <anchor> (cons (cons anchor (lambda () mapping)) <anchor>))))
-						(lambda () mapping))) ; Use (lambda) to distinguish yaml-list and yaml-mapping
+						(let ((mapping (lambda () mapping)))
+							(if anchor (if (not (assoc anchor <anchor>)) (set! <anchor> (cons (cons anchor mapping) <anchor>))))
+							mapping))) ; Use (lambda) to distinguish yaml-list and yaml-mapping
 			) ; (cond)
 		)
 		(:libyaml:read (yaml-parser-parse (&parser) (&event)))))
-
 (define (libyaml:dump . >^<)
 	(if (null? >^<) (error "no yaml provided"))
 	(set! ^ (car >^<))
@@ -334,6 +335,11 @@
 			((list yaml) '())
 			(else '())
 		)))
-(set! yaml (libyaml:fixed-mapping (libyaml:read)))
-;(write yaml)
+
+(set! yaml (libyaml:read))
+;(write/ yaml)
+;(write/ (libyaml:fixed-mapping yaml))
+
+(write/
 (libyaml:dump yaml)
+)

@@ -52,6 +52,7 @@
 (define yaml_parser_delete (foreign-lambda void "yaml_parser_delete" (c-pointer "yaml_parser_t")))
 
 (define-syntax write/ (syntax-rules () ((write/ towrite ...) (let () (write towrite ...) (print "")))))
+
 (define (argparse <> <without-value> <with-value>)
 	(if (not (list? <>)) (error "argument is not a list" <>))
 	(define (:argparse <> <arg> >arg<)
@@ -76,15 +77,11 @@
 					"C_return((_p)->" to-access ... ");")
 				pointer
 			))))
-(define (libyaml:fixed-mapping yaml)
-	(cond
-		((list? yaml) (map libyaml:fixed-mapping yaml))
-		((pair? yaml) (cons (libyaml:fixed-mapping (car yaml)) (libyaml:fixed-mapping (cdr yaml))))
-		(else (if (procedure? yaml) (libyaml:fixed-mapping (yaml)) yaml))))
-(define (libyaml:read . ><) ; TODO anchor
-	(set! >< (argparse >< '() (list #:input #:encoding)))
+
+(define (libyaml:read . ><)
 	(let*
 		(
+			(>< (argparse >< '() (list #:input #:encoding)))
 			(string->number (lambda (?)
 				(if (string->number ?)
 					(string->number ?)
@@ -199,7 +196,7 @@
 					(*-> "yaml_event_t" (&event) "data.sequence_start.tag" c-string)
 					(*-> "yaml_event_t" (&event) "data.mapping_start.tag" c-string)
 				)
-				(warning (sprintf "tag at [line:~A , colunm:~A]"
+				(warning (sprintf "tag at [line:~A , colunm:~A]" ; TODO: make tage to a vector
 					(+ 1 (*-> "yaml_event_t" (&event) "start_mark.line" size_t))
 					(+ 1 (*-> "yaml_event_t" (&event) "start_mark.column" size_t)))
 					"all tags tag will be ignored and always return the literal value"))
@@ -246,10 +243,11 @@
 													(if sign (substring << 0 1) "+")
 													(list->string (map char-downcase (string->list (substring << (if sign 2 1)))))
 													".0"))))
-										((irregex-match? "\\.nan|\\.NaN|\\.NAN" <<) (string-append
-											"+"
-											(list->string (map char-downcase (string->list (substring << 1))))
-											".0"))
+										((irregex-match? "\\.nan|\\.NaN|\\.NAN" <<)
+											(string->number (string-append
+												"+"
+												(list->string (map char-downcase (string->list (substring << 1))))
+												".0")))
 										(else <<)
 									)
 									<<))
@@ -322,43 +320,47 @@
 			) ; (cond)
 		)
 		(:libyaml:read (yaml-parser-parse (&parser) (&event)))))
-(define (libyaml:dump . >^<)
-	(if (null? >^<) (error "no yaml provided"))
-	(set! ^ (car >^<))
-	(set! >< (argparse (cdr >^<) '(#:string #:oneline) '(#:port #:indent)))
-	(define (:libyaml:dump-document yaml)
-		(cond
-			((procedure? yaml) '())
-			((list yaml) '())
-			(else (let((yaml (cond
-				((or (= (string-length yaml) 0) (irregex-match? "null|Null|NULL|~" yaml)) '())
-				((irregex-match? "true|True|TRUE|false|False|FALSE" yaml)
-					(let* ((^ (char-downcase (string-ref yaml 0))))
-						(cond ((char=? ^ #\f) #f) ((char=? ^ #\f) #f) ((char=? ^ #\t) #t))))
-				(
-					(or
-						(irregex-match? "[-+]?[0-9]+" yaml)
-						(irregex-match? "[-+]?(\\.[0-9]+|[0-9]+(\\.[0-9]*)?)([eE][-+]?[0-9]+)?" yaml)
-					) (string->number yaml))
-				(
-					(or
-						(irregex-match? "0o[0-7]+" yaml)
-						(irregex-match? "0x[0-9a-fA-F]+" yaml)
-					) (string->number (string-append "#" (substring yaml 1))))
-				((irregex-match? "[-+]?(\\.inf|\\.Inf|\\.INF)" yaml)
-					(let ((sign (not (char=? #\. (string-ref yaml 0)))))
-						(string->number (string-append
-							(if sign (substring yaml 0 1) "+")
-							(list->string (map char-downcase (string->list (substring yaml (if sign 2 1)))))
-							".0"))))
-				((irregex-match? "\\.nan|\\.NaN|\\.NAN" yaml) (string-append
-					"+"
-					(list->string (map char-downcase (string->list (substring yaml 1))))
-					".0"))
-				(else yaml)
-				))) yaml)
-			))))
 
-(set! yaml (libyaml:read))
+(define (libyaml:fixed-mapping yaml)
+	(cond
+		((list? yaml) (map libyaml:fixed-mapping yaml))
+		((pair? yaml) (cons (libyaml:fixed-mapping (car yaml)) (libyaml:fixed-mapping (cdr yaml))))
+		(else (if (procedure? yaml) (libyaml:fixed-mapping (yaml)) yaml))))
+
+(define (libyaml:dump . yaml><)
+	(if (null? yaml><) (error "no yaml provided"))
+	(let
+		(
+			(yaml (car yaml><))
+			(>< (argparse
+				(cdr yaml><)
+				'(#:string #:oneline #:1-document-wrap)
+				'(#:port #:indent)))
+		)
+		(define (:libyaml:dump-document yaml)
+			(cond
+				((null? yaml) "~") ; TODO
+				((procedure? yaml) '()) ; TODO
+				((list? yaml) '() ; Note that '() is also list
+				) ; TODO
+				(else (let((yaml (cond
+					((string? yaml) (string-split yaml "\n" #t))
+					((number? yaml)
+						(cond
+							((nan? yaml) ".NAN")
+							((infinite? yaml) (if (> yaml 0) "+.inf" "-.inf"))
+							(else (number->string yaml))))
+					((boolean? yaml) (if yaml "true" "false"))
+					))) yaml))))
+		(append
+			(if (or (> (length yaml) 1) (member #:1-document-wrap (car ><))) '("---") '())
+			(flatten (join (map list (map :libyaml:dump-document yaml)) '("..." "---")))
+			(if (or (> (length yaml) 1) (member #:1-document-wrap (car ><))) '("...") '()))))
+
+;(define yaml (libyaml:read))
 ;(write/ yaml)
+;(write/
+;;(libyaml:dump yaml #:1-document-wrap)
+;(libyaml:dump yaml)
+;)
 ;(write/ (libyaml:fixed-mapping yaml))

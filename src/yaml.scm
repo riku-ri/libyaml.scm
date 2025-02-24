@@ -2,6 +2,7 @@
 (import (chicken foreign))
 (import (chicken keyword))
 (import (chicken format))
+(import (chicken string))
 (import (chicken irregex))
 
 (foreign-declare "#include <string.h>")
@@ -304,10 +305,7 @@
 							(anchor (*-> "yaml_event_t" (&event) "data.mapping_start.anchor" c-string))
 							(mapping (
 								((lambda (@) (@ @)) (lambda (@) (lambda ()
-									(let*
-										(
-											(event (yaml-parser-parse (&parser) (&event)))
-										)
+									(let* ((event (yaml-parser-parse (&parser) (&event))))
 										(cond
 											((= event YAML_MAPPING_END_EVENT) '())
 											(else
@@ -316,8 +314,7 @@
 														(k (:libyaml:read event))
 														(v (:libyaml:read (yaml-parser-parse (&parser) (&event))))
 													)
-													(let ((<< (cons (cons k v) ((@ @))))) <<)
-											)))))))))
+													(let ((<< (cons (cons k v) ((@ @))))) <<))))))))))
 						)
 						(let ((mapping (lambda () mapping)))
 							(if anchor (if (not (assoc anchor <anchor>)) (set! <anchor> (cons (cons anchor mapping) <anchor>))))
@@ -333,13 +330,35 @@
 		(cond
 			((procedure? yaml) '())
 			((list yaml) '())
-			(else '())
-		)))
+			(else (let((yaml (cond
+				((or (= (string-length yaml) 0) (irregex-match? "null|Null|NULL|~" yaml)) '())
+				((irregex-match? "true|True|TRUE|false|False|FALSE" yaml)
+					(let* ((^ (char-downcase (string-ref yaml 0))))
+						(cond ((char=? ^ #\f) #f) ((char=? ^ #\f) #f) ((char=? ^ #\t) #t))))
+				(
+					(or
+						(irregex-match? "[-+]?[0-9]+" yaml)
+						(irregex-match? "[-+]?(\\.[0-9]+|[0-9]+(\\.[0-9]*)?)([eE][-+]?[0-9]+)?" yaml)
+					) (string->number yaml))
+				(
+					(or
+						(irregex-match? "0o[0-7]+" yaml)
+						(irregex-match? "0x[0-9a-fA-F]+" yaml)
+					) (string->number (string-append "#" (substring yaml 1))))
+				((irregex-match? "[-+]?(\\.inf|\\.Inf|\\.INF)" yaml)
+					(let ((sign (not (char=? #\. (string-ref yaml 0)))))
+						(string->number (string-append
+							(if sign (substring yaml 0 1) "+")
+							(list->string (map char-downcase (string->list (substring yaml (if sign 2 1)))))
+							".0"))))
+				((irregex-match? "\\.nan|\\.NaN|\\.NAN" yaml) (string-append
+					"+"
+					(list->string (map char-downcase (string->list (substring yaml 1))))
+					".0"))
+				(else yaml)
+				))) yaml)
+			))))
 
 (set! yaml (libyaml:read))
 ;(write/ yaml)
 ;(write/ (libyaml:fixed-mapping yaml))
-
-(write/
-(libyaml:dump yaml)
-)

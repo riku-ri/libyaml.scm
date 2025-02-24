@@ -71,6 +71,12 @@
 	(:argparse <> '() '()))
 
 (define-syntax *-> (syntax-rules () ((*-> type-string pointer to-access ... return-type) ((foreign-lambda* return-type (((c-pointer type-string) _p)) "C_return((_p)->" to-access ... ");") pointer))))
+
+(define (libyaml:fixed-mapping yaml)
+	(cond
+		((list? yaml) (map libyaml:fixed-mapping yaml))
+		((pair? yaml) (cons (libyaml:fixed-mapping (car yaml)) (libyaml:fixed-mapping (cdr yaml))))
+		(else (if (procedure? yaml) (libyaml:fixed-mapping (yaml)) yaml))))
 (define (libyaml:read . >argparse<) ; TODO anchor
 	(define >< (argparse >argparse< '() (list #:input #:encoding)))
 	(let*
@@ -122,13 +128,14 @@
 						((not (= (yaml_parser_parse parser event) 1)) ; According to comment in yaml.h , yaml_parser_parse() return 1 if the function succeeded
 							(let*
 								(
-									(errmessage (sprintf
-										"[~A] ~A ~A at [line:~A , colunm:~A]"
-										(*-> "yaml_parser_t" (&parser) "error" yaml_error_type_t)
-										(c-string-or-empty (*-> "yaml_parser_t" (&parser) "problem" c-string))
-										(c-string-or-empty (*-> "yaml_parser_t" (&parser) "context" c-string))
-										(+ 1 (*-> "yaml_parser_t" (&parser) "problem_mark.line" size_t))
-										(+ 1 (*-> "yaml_parser_t" (&parser) "problem_mark.column" size_t))))
+									(errmessage
+										(sprintf
+											"[~A] ~A ~A at [line:~A , colunm:~A]"
+											(*-> "yaml_parser_t" (&parser) "error" yaml_error_type_t)
+											(c-string-or-empty (*-> "yaml_parser_t" (&parser) "problem" c-string))
+											(c-string-or-empty (*-> "yaml_parser_t" (&parser) "context" c-string))
+											(+ 1 (*-> "yaml_parser_t" (&parser) "problem_mark.line" size_t))
+											(+ 1 (*-> "yaml_parser_t" (&parser) "problem_mark.column" size_t))))
 								)
 							(clear)
 							(error errmessage)
@@ -161,30 +168,69 @@
 				(error (sprintf "~S is not in ~A" #:encoding (map (lambda (?) (cdr (assoc #:string (cdr ?)))) >yaml_encoding_e<)))))
 		(set! <anchor> (list))
 		(define (:libyaml:read event)
+			(if
+				(or
+					(*-> "yaml_event_t" (&event) "data.scalar.tag" c-string)
+					(*-> "yaml_event_t" (&event) "data.sequence_start.tag" c-string)
+					(*-> "yaml_event_t" (&event) "data.mapping_start.tag" c-string)
+				)
+				(warning
+					(sprintf
+						"tag at [line:~A , colunm:~A]"
+						(+ 1 (*-> "yaml_event_t" (&event) "start_mark.line" size_t))
+						(+ 1 (*-> "yaml_event_t" (&event) "start_mark.column" size_t)))
+						"all tags tag will be ignored and always return the literal value"))
 			(cond
-				((= (*-> "yaml_event_t" (&event) "type" yaml_event_type_t) YAML_NO_EVENT) (error (sprintf "You should never go into this event ~S" 'YAML_NO_EVENT)))
+				((= event YAML_NO_EVENT)
+					(error (sprintf "You should never go into this event ~S" 'YAML_NO_EVENT)))
+				((= event YAML_ALIAS_EVENT)
+					(let
+						(
+							(anchor (*-> "yaml_event_t" (&event) "data.alias.anchor" c-string))
+						)
+						(if (not (assoc anchor <anchor>))
+							(error "No reference or circular reference to anchor" anchor))
+						(cdr (assoc anchor <anchor>))))
 				((= event YAML_SCALAR_EVENT)
-					(let* ((<< (*-> "yaml_event_t" (&event) "data.scalar.value" c-string)))
-						(if (*-> "yaml_event_t" (&event) "data.scalar.plain_implicit" bool)
-						; XXX: implicit yaml-tag value also not set plain_implicit. But yaml-tag will be ignored and always return the literal value
-							(cond
-								((or (= (string-length <<) 0) (irregex-match? "null|Null|NULL|~" <<)) '())
-								((irregex-match? "true|True|TRUE|false|False|FALSE" <<) (let* ((^ (char-downcase (string-ref << 0))))
-									(cond ((char=? ^ #\f) #f) ((char=? ^ #\f) #f) ((char=? ^ #\t) #t))))
-								((or (irregex-match? "[-+]?[0-9]+" <<) (irregex-match? "[-+]?(\\.[0-9]+|[0-9]+(\\.[0-9]*)?)([eE][-+]?[0-9]+)?" <<)) (string->number <<))
-								((or (irregex-match? "0o[0-7]+" <<) (irregex-match? "0x[0-9a-fA-F]+" <<)) (string->number (string-append "#" (substring << 1))))
-								((irregex-match? "[-+]?(\\.inf|\\.Inf|\\.INF)" <<)
-									(let ((sign (not (char=? #\. (string-ref << 0)))))
-										(string->number (string-append
-											(if sign (substring << 0 1) "+")
-											(list->string (map char-downcase (string->list (substring << (if sign 2 1)))))
-											".0"))))
-								((irregex-match? "\\.nan|\\.NaN|\\.NAN" <<) (string-append
-									"+"
-									(list->string (map char-downcase (string->list (substring << 1))))
-									".0"))
-								(else <<)
+					(let*
+						(
+							(anchor (*-> "yaml_event_t" (&event) "data.scalar.anchor" c-string))
+							(<< (*-> "yaml_event_t" (&event) "data.scalar.value" c-string))
+						)
+						(let
+							(
+								(<< (if (*-> "yaml_event_t" (&event) "data.scalar.plain_implicit" bool)
+								; XXX: implicit yaml-tag value also not set plain_implicit. But yaml-tag will be ignored and always return the literal value
+									(cond
+										((or (= (string-length <<) 0) (irregex-match? "null|Null|NULL|~" <<)) '())
+										((irregex-match? "true|True|TRUE|false|False|FALSE" <<)
+											(let* ((^ (char-downcase (string-ref << 0))))
+												(cond ((char=? ^ #\f) #f) ((char=? ^ #\f) #f) ((char=? ^ #\t) #t))))
+										(
+											(or
+												(irregex-match? "[-+]?[0-9]+" <<)
+												(irregex-match? "[-+]?(\\.[0-9]+|[0-9]+(\\.[0-9]*)?)([eE][-+]?[0-9]+)?" <<)
+											) (string->number <<))
+										(
+											(or
+												(irregex-match? "0o[0-7]+" <<)
+												(irregex-match? "0x[0-9a-fA-F]+" <<)
+											) (string->number (string-append "#" (substring << 1))))
+										((irregex-match? "[-+]?(\\.inf|\\.Inf|\\.INF)" <<)
+											(let ((sign (not (char=? #\. (string-ref << 0)))))
+												(string->number (string-append
+													(if sign (substring << 0 1) "+")
+													(list->string (map char-downcase (string->list (substring << (if sign 2 1)))))
+													".0"))))
+										((irregex-match? "\\.nan|\\.NaN|\\.NAN" <<) (string-append
+											"+"
+											(list->string (map char-downcase (string->list (substring << 1))))
+											".0"))
+										(else <<)
+									)
+									<<))
 							)
+							(if anchor (if (not (assoc anchor <anchor>)) (set! <anchor> (cons (cons anchor <<) <anchor>))))
 							<<)))
 				((= event YAML_STREAM_START_EVENT)
 					(
@@ -194,9 +240,7 @@
 									((= event YAML_STREAM_END_EVENT) '())
 									; If yaml-parser-parse is later then check YAML_SEQUENCE_END_EVENT,
 									; it will return an undefined value but not '() here
-									(else
-										(let* ((<< (cons (:libyaml:read event) ((@ @))))) <<)
-									))))))
+									(else (let ((<< (cons (:libyaml:read event) ((@ @))))) <<)))))))
 					))
 				((= event YAML_DOCUMENT_START_EVENT)
 					(
@@ -210,38 +254,50 @@
 										(cdr (assoc #:string (cdr (assoc event >yaml_event_type_e<))))
 										"YAML_DOCUMENT_END_EVENT does not appear after twice yaml_parser_parse from YAML_DOCUMENT_START_EVENT"
 										"This may be a bug in libyaml itself, it was supposed to generate a parser error here"
-									)
-								))))))
+									)))))))
 						(let* ((<< (:libyaml:read (yaml-parser-parse (&parser) (&event))))) <<)
 					))
 				((= event YAML_SEQUENCE_START_EVENT)
 					(
 						((lambda (@) (@ @)) (lambda (@) (lambda ()
-							(let* ((event (yaml-parser-parse (&parser) (&event))))
+							(let* ; anchor need to be cached before next parse
+								(
+									(anchor (*-> "yaml_event_t" (&event) "data.sequence_start.anchor" c-string))
+									(event (yaml-parser-parse (&parser) (&event)))
+								)
 								; If not get event but use the value in member of (&event), all recursion will end by the most internal YAML_SEQUENCE_END_EVENT
 								; YAML_STREAM_START_EVENT has no this problem because stream would never be nested
 								(cond
 									((= event YAML_SEQUENCE_END_EVENT) '())
 									(else
-										(let* ((<< (cons (:libyaml:read event) ((@ @))))) <<)
+										(let ((<< (cons (:libyaml:read event) ((@ @)))))
+											(if anchor (if (not (assoc anchor <anchor>)) (set! <anchor> (cons (cons anchor <<) <anchor>))))
+											<<)
 									))))))
 					))
 				((= event YAML_MAPPING_START_EVENT)
-					(let* ((mapping
+					(let*
 						(
-							((lambda (@) (@ @)) (lambda (@) (lambda ()
-								(let* ((event (yaml-parser-parse (&parser) (&event))))
-									(cond
-										((= event YAML_MAPPING_END_EVENT) '())
-										(else
-											(let* ; Use (let*) to make sure value is after key
-												(
-													(k (:libyaml:read event))
-													(v (:libyaml:read (yaml-parser-parse (&parser) (&event))))
-												)
-												(let* ((<< (cons (cons k v) ((@ @))))) <<)
-										)))))))
-						))) (lambda () mapping))) ; Use (lambda) to distinguish yaml-list and yaml-mapping
+							(anchor (*-> "yaml_event_t" (&event) "data.mapping_start.anchor" c-string))
+							(mapping (
+								((lambda (@) (@ @)) (lambda (@) (lambda ()
+									(let*
+										(
+											(event (yaml-parser-parse (&parser) (&event)))
+										)
+										(cond
+											((= event YAML_MAPPING_END_EVENT) '())
+											(else
+												(let* ; Use (let*) to make sure value is after key
+													(
+														(k (:libyaml:read event))
+														(v (:libyaml:read (yaml-parser-parse (&parser) (&event))))
+													)
+													(let ((<< (cons (cons k v) ((@ @))))) <<)
+											)))))))))
+						)
+						(if anchor (if (not (assoc anchor <anchor>)) (set! <anchor> (cons (cons anchor (lambda () mapping)) <anchor>))))
+						(lambda () mapping))) ; Use (lambda) to distinguish yaml-list and yaml-mapping
 			) ; (cond)
 		)
 		(:libyaml:read (yaml-parser-parse (&parser) (&event)))))
@@ -277,8 +333,9 @@
 					(eval (cons string-append (join (map list (map (lambda (?) (string-append :indent "- " ?)) l)) '("\n")))))))
 			(else (sprintf "~S" yaml)))) ; TODO: multiline string
 	(eval (cons string-append (join (map list (map (lambda (?) (string-append "---" "\n" ? "\n" "...")) (map (lambda (?) (<libyaml:dump-document> ? 0)) yaml))) '("\n")))))
-(define yaml (libyaml:read))
-(write yaml)
+
+;(define yaml (libyaml:fixed-mapping (libyaml:read)))
+;(write yaml)
 ;(print (libyaml:dump yaml))
 
 ;(set! yaml (libyaml:read))

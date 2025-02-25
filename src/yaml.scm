@@ -1,3 +1,5 @@
+(module libyaml ()
+
 (import scheme)
 (import (chicken base))
 (import (chicken syntax))
@@ -10,40 +12,50 @@
 (foreign-declare "#include <string.h>")
 (foreign-declare "#include <yaml.h>")
 
+(define-syntax foreign-value-index (syntax-rules ()
+	((foreign-value-index index symbol value)
+		(begin
+			(define symbol value)
+			(define index
+				(if (assoc symbol index)
+					index
+					(cons (cons symbol (quote symbol)) index)))))))
+
 (define-foreign-type yaml_error_type_t int)
 ; XXX: Here use int as return value is because the typedef cannot be set in (foreigin-lambda*)
-
 ;(define-foreign-type bool int (lambda (?) (if ? 1 0)) (lambda (?) (if (= ? 0) #f #t)))
 ; foreign-type bool had been defined in chicken
-
-(define YAML_NO_ERROR (foreign-value "YAML_NO_ERROR" yaml_error_type_t))
-(define YAML_MEMORY_ERROR (foreign-value "YAML_MEMORY_ERROR" yaml_error_type_t))
-(define YAML_READER_ERROR (foreign-value "YAML_READER_ERROR" yaml_error_type_t))
-(define YAML_SCANNER_ERROR (foreign-value "YAML_SCANNER_ERROR" yaml_error_type_t))
-(define YAML_PARSER_ERROR (foreign-value "YAML_PARSER_ERROR" yaml_error_type_t))
-(define YAML_COMPOSER_ERROR (foreign-value "YAML_COMPOSER_ERROR" yaml_error_type_t))
-(define YAML_WRITER_ERROR (foreign-value "YAML_WRITER_ERROR" yaml_error_type_t))
-(define YAML_EMITTER_ERROR (foreign-value "YAML_EMITTER_ERROR" yaml_error_type_t))
+(define >yaml_error_type_e< '())
+(foreign-value-index >yaml_error_type_e< YAML_MEMORY_ERROR (foreign-value "YAML_MEMORY_ERROR" yaml_error_type_t))
+(foreign-value-index >yaml_error_type_e< YAML_READER_ERROR (foreign-value "YAML_READER_ERROR" yaml_error_type_t))
+(foreign-value-index >yaml_error_type_e< YAML_SCANNER_ERROR (foreign-value "YAML_SCANNER_ERROR" yaml_error_type_t))
+(foreign-value-index >yaml_error_type_e< YAML_PARSER_ERROR (foreign-value "YAML_PARSER_ERROR" yaml_error_type_t))
+(foreign-value-index >yaml_error_type_e< YAML_COMPOSER_ERROR (foreign-value "YAML_COMPOSER_ERROR" yaml_error_type_t))
+(foreign-value-index >yaml_error_type_e< YAML_WRITER_ERROR (foreign-value "YAML_WRITER_ERROR" yaml_error_type_t))
+(foreign-value-index >yaml_error_type_e< YAML_EMITTER_ERROR (foreign-value "YAML_EMITTER_ERROR" yaml_error_type_t))
+(foreign-value-index >yaml_error_type_e< YAML_NO_ERROR (foreign-value "YAML_NO_ERROR" yaml_error_type_t))
 
 (define-foreign-type yaml_encoding_t int)
-(define YAML_ANY_ENCODING (foreign-value "YAML_ANY_ENCODING" yaml_encoding_t))
-(define YAML_UTF8_ENCODING (foreign-value "YAML_UTF8_ENCODING" yaml_encoding_t))
-(define YAML_UTF16LE_ENCODING (foreign-value "YAML_UTF16LE_ENCODING" yaml_encoding_t))
-(define YAML_UTF16BE_ENCODING (foreign-value "YAML_UTF16BE_ENCODING" yaml_encoding_t))
+(define >yaml_encoding_e< '())
+(foreign-value-index >yaml_encoding_e< YAML_ANY_ENCODING (foreign-value "YAML_ANY_ENCODING" yaml_encoding_t))
+(foreign-value-index >yaml_encoding_e< YAML_UTF8_ENCODING (foreign-value "YAML_UTF8_ENCODING" yaml_encoding_t))
+(foreign-value-index >yaml_encoding_e< YAML_UTF16LE_ENCODING (foreign-value "YAML_UTF16LE_ENCODING" yaml_encoding_t))
+(foreign-value-index >yaml_encoding_e< YAML_UTF16BE_ENCODING (foreign-value "YAML_UTF16BE_ENCODING" yaml_encoding_t))
 
 (define-foreign-type yaml_event_type_t int)
-(define YAML_ERROR_EVENT (foreign-value "(-1)" yaml_event_type_t))
-(define YAML_NO_EVENT (foreign-value "(YAML_NO_EVENT)" yaml_event_type_t))
-(define YAML_STREAM_START_EVENT (foreign-value "(YAML_STREAM_START_EVENT)" yaml_event_type_t))
-(define YAML_STREAM_END_EVENT (foreign-value "(YAML_STREAM_END_EVENT)" yaml_event_type_t))
-(define YAML_DOCUMENT_START_EVENT (foreign-value "(YAML_DOCUMENT_START_EVENT)" yaml_event_type_t))
-(define YAML_DOCUMENT_END_EVENT (foreign-value "(YAML_DOCUMENT_END_EVENT)" yaml_event_type_t))
-(define YAML_ALIAS_EVENT (foreign-value "(YAML_ALIAS_EVENT)" yaml_event_type_t))
-(define YAML_SCALAR_EVENT (foreign-value "(YAML_SCALAR_EVENT)" yaml_event_type_t))
-(define YAML_SEQUENCE_START_EVENT (foreign-value "(YAML_SEQUENCE_START_EVENT)" yaml_event_type_t))
-(define YAML_SEQUENCE_END_EVENT (foreign-value "(YAML_SEQUENCE_END_EVENT)" yaml_event_type_t))
-(define YAML_MAPPING_START_EVENT (foreign-value "(YAML_MAPPING_START_EVENT)" yaml_event_type_t))
-(define YAML_MAPPING_END_EVENT (foreign-value "(YAML_MAPPING_END_EVENT)" yaml_event_type_t))
+(define >yaml_event_type_e< '())
+(foreign-value-index >yaml_event_type_e< YAML_ERROR_EVENT (foreign-value "(-1)" yaml_event_type_t))
+(foreign-value-index >yaml_event_type_e< YAML_NO_EVENT (foreign-value "(YAML_NO_EVENT)" yaml_event_type_t))
+(foreign-value-index >yaml_event_type_e< YAML_STREAM_START_EVENT (foreign-value "(YAML_STREAM_START_EVENT)" yaml_event_type_t))
+(foreign-value-index >yaml_event_type_e< YAML_STREAM_END_EVENT (foreign-value "(YAML_STREAM_END_EVENT)" yaml_event_type_t))
+(foreign-value-index >yaml_event_type_e< YAML_DOCUMENT_START_EVENT (foreign-value "(YAML_DOCUMENT_START_EVENT)" yaml_event_type_t))
+(foreign-value-index >yaml_event_type_e< YAML_DOCUMENT_END_EVENT (foreign-value "(YAML_DOCUMENT_END_EVENT)" yaml_event_type_t))
+(foreign-value-index >yaml_event_type_e< YAML_ALIAS_EVENT (foreign-value "(YAML_ALIAS_EVENT)" yaml_event_type_t))
+(foreign-value-index >yaml_event_type_e< YAML_SCALAR_EVENT (foreign-value "(YAML_SCALAR_EVENT)" yaml_event_type_t))
+(foreign-value-index >yaml_event_type_e< YAML_SEQUENCE_START_EVENT (foreign-value "(YAML_SEQUENCE_START_EVENT)" yaml_event_type_t))
+(foreign-value-index >yaml_event_type_e< YAML_SEQUENCE_END_EVENT (foreign-value "(YAML_SEQUENCE_END_EVENT)" yaml_event_type_t))
+(foreign-value-index >yaml_event_type_e< YAML_MAPPING_START_EVENT (foreign-value "(YAML_MAPPING_START_EVENT)" yaml_event_type_t))
+(foreign-value-index >yaml_event_type_e< YAML_MAPPING_END_EVENT (foreign-value "(YAML_MAPPING_END_EVENT)" yaml_event_type_t))
 
 (define yaml_parser_set_encoding (foreign-lambda void "yaml_parser_set_encoding" (c-pointer "yaml_parser_t") yaml_encoding_t))
 (define yaml_parser_initialize (foreign-lambda int "yaml_parser_initialize" (c-pointer "yaml_parser_t")))
@@ -104,38 +116,10 @@
 							(else (cons
 								(cons
 									(eval (car <enum>))
+									; ERR: when export as module, the symbol is not symbols defined before
 									(list (cons #:string (symbol->string (car <enum>)))))
 								((? ?) (cdr <enum>)))))))))
 			(c-string-or-empty (lambda (tocheck) (let* ((str tocheck)) (if str str ""))))
-			(>yaml_error_type_e< (@enum '(
-				YAML_NO_ERROR
-				YAML_MEMORY_ERROR
-				YAML_READER_ERROR
-				YAML_SCANNER_ERROR
-				YAML_PARSER_ERROR
-				YAML_COMPOSER_ERROR
-				YAML_WRITER_ERROR
-				YAML_EMITTER_ERROR
-			)))
-			(>yaml_event_type_e< (@enum '(
-				YAML_NO_EVENT
-				YAML_STREAM_START_EVENT
-				YAML_STREAM_END_EVENT
-				YAML_DOCUMENT_START_EVENT
-				YAML_DOCUMENT_END_EVENT
-				YAML_ALIAS_EVENT
-				YAML_SCALAR_EVENT
-				YAML_SEQUENCE_START_EVENT
-				YAML_SEQUENCE_END_EVENT
-				YAML_MAPPING_START_EVENT
-				YAML_MAPPING_END_EVENT
-			)))
-			(>yaml_encoding_e< (@enum '(
-				YAML_ANY_ENCODING
-				YAML_UTF8_ENCODING
-				YAML_UTF16LE_ENCODING
-				YAML_UTF16BE_ENCODING
-			)))
 			(yaml-parser-parse
 				(lambda (parser event)
 					(cond
@@ -191,9 +175,7 @@
 				(error
 					(sprintf "cannot set encoding to ~S" (cdr (assoc #:encoding (cdr ><))))
 					(sprintf "enable encodings should be in ~A"
-						(map
-							(lambda (?) (cdr (assoc #:string (cdr ?))))
-							>yaml_encoding_e<)))))
+						(map cdr >yaml_encoding_e<)))))
 		(define <anchor> (list))
 		(define (:libyaml:read event)
 			(if
@@ -395,10 +377,12 @@
 			(flatten (join (map list (map :libyaml:dump-document yaml)) '("..." "---")))
 			(if (or (> (length yaml) 1) (member #:1-document-wrap (car ><))) '("...") '()))))
 
-(define yaml (libyaml:read '(#:encoding . -1)))
+(define yaml (libyaml:read))
 (write/ yaml)
 ;(write/
 ;;(libyaml:dump yaml #:1-document-wrap)
 ;(libyaml:dump yaml)
 ;)
 (write/ (libyaml:ordered-mapping yaml))
+
+)

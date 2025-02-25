@@ -1,4 +1,6 @@
 (import scheme)
+(import (chicken base))
+(import (chicken syntax))
 (import (chicken foreign))
 (import (chicken keyword))
 (import (chicken format))
@@ -100,7 +102,9 @@
 						(cond
 							((null? <enum>) '())
 							(else (cons
-								`(,(eval (car <enum>)) (#:string . ,(symbol->string (car <enum>))))
+								(cons
+									(eval (car <enum>))
+									(list (cons #:string (symbol->string (car <enum>)))))
 								((? ?) (cdr <enum>)))))))))
 			(c-string-or-empty (lambda (tocheck) (let* ((str tocheck)) (if str str ""))))
 			(>yaml_error_type_e< (@enum '(
@@ -157,6 +161,7 @@
 						)
 					)))
 		)
+
 		(memset (&parser) 0 (foreign-type-size "yaml_parser_t"))
 		(memset (&event) 0 (foreign-type-size "yaml_event_t"))
 
@@ -165,30 +170,31 @@
 			(error (sprintf "[~A] with error [~A]"
 				<<
 				(*-> "yaml_parser_t" (&parser) "error" yaml_error_type_t)))))
-		(if (assoc #:input (cdr ><))
-			(let ((input (cdr (assoc #:input (cdr ><)))))
-				(cond
-					((string? input)
-						(yaml_parser_set_input_string (&parser) input (string-length input)))
-					((input-port? input) (yaml_parser_set_input_file (&parser) input))))
-			(yaml_parser_set_input_file (&parser) (current-input-port)))
-		(yaml_parser_set_encoding
-			(&parser)
-			(if (assoc #:encoding (cdr ><))
-				(cdr (assoc #:encoding (cdr ><)))
-				YAML_ANY_ENCODING))
+		(let ((port->FILE* (foreign-lambda c-pointer "C_port_file" scheme-object)))
+			(if (assoc #:input (cdr ><))
+				(let ((input (cdr (assoc #:input (cdr ><)))))
+					(cond
+						((string? input)
+							(yaml_parser_set_input_string (&parser) input (string-length input)))
+						((input-port? input) (yaml_parser_set_input_file (&parser) (port->FILE* input)))))
+				(yaml_parser_set_input_file (&parser) (port->FILE* (current-input-port)))))
+
 		(if (assoc #:encoding (cdr ><))
-			(if (not (= (
-					(foreign-lambda* yaml_encoding_t (((c-pointer "yaml_parser_t") _p))
-						"C_return((_p)->encoding);")
-					(&parser))
-				(cdr (assoc #:encoding (cdr ><)))))
-				(error (sprintf "~S is not in ~A"
-					#:encoding
-					(map
-						(lambda (?) (cdr (assoc #:string (cdr ?))))
-						>yaml_encoding_e<)))))
-		(set! <anchor> (list))
+			(let ((encoding (cdr (assoc #:encoding (cdr ><)))))
+				(yaml_parser_set_encoding (&parser) encoding)))
+
+		(if (assoc #:encoding (cdr ><))
+			(if (not
+				(=
+					(*-> "yaml_parser_t" (&parser) "encoding" yaml_encoding_t)
+					(cdr (assoc #:encoding (cdr ><)))))
+				(error
+					(sprintf "cannot set encoding to ~S" (cdr (assoc #:encoding (cdr ><))))
+					(sprintf "enable encodings should be in ~A"
+						(map
+							(lambda (?) (cdr (assoc #:string (cdr ?))))
+							>yaml_encoding_e<)))))
+		(define <anchor> (list))
 		(define (:libyaml:read event)
 			(if
 				(or
@@ -389,8 +395,8 @@
 			(flatten (join (map list (map :libyaml:dump-document yaml)) '("..." "---")))
 			(if (or (> (length yaml) 1) (member #:1-document-wrap (car ><))) '("...") '()))))
 
-(define yaml (libyaml:read))
-;(write/ yaml)
+(define yaml (libyaml:read '(#:encoding . -1)))
+(write/ yaml)
 ;(write/
 ;;(libyaml:dump yaml #:1-document-wrap)
 ;(libyaml:dump yaml)

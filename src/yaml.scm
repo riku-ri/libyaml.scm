@@ -395,7 +395,7 @@
 					((string? yaml) (string-split yaml "\n" #t))
 					((number? yaml)
 						(cond
-							((nan? yaml) ".NAN")
+							((nan? yaml) ".nan")
 							((infinite? yaml) (if (> yaml 0) "+.inf" "-.inf"))
 							(else (number->string yaml))))
 					((boolean? yaml) (if yaml "true" "false"))

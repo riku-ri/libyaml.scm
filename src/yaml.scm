@@ -6,6 +6,11 @@
 		yaml-mapping-in?
 		yaml-mapping-in??
 		yaml-mapping-in???
+
+		YAML_ANY_ENCODING
+		YAML_UTF8_ENCODING
+		YAML_UTF16LE_ENCODING
+		YAML_UTF16BE_ENCODING
 	)
 
 (import scheme)

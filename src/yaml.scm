@@ -3,6 +3,9 @@
 		yaml<-
 		yaml-string<-
 		mapping-ordered-yaml<-
+		yaml-mapping-in?
+		yaml-mapping-in??
+		yaml-mapping-in???
 	)
 
 (import scheme)
@@ -22,9 +25,9 @@
 		(begin
 			(define symbol value)
 			(define index
-				(if (assoc symbol index)
-					index
-					(cons (cons symbol (quote symbol)) index)))))))
+				(cond
+					((assoc symbol index) index)
+					(else (cons (cons symbol (quote symbol)) index))))))))
 
 (define-foreign-type yaml_error_type_t int)
 ; XXX: Here use int as return value is because the typedef cannot be set in (foreigin-lambda*)
@@ -179,10 +182,10 @@
 					(*-> "yaml_event_t" (&event) "data.sequence_start.tag" c-string)
 					(*-> "yaml_event_t" (&event) "data.mapping_start.tag" c-string)
 				)
-				(warning (sprintf "tag at [line:~A , colunm:~A]" ; TODO: make tage to a vector
+				(error (sprintf "tag at [line:~A , colunm:~A]" ; TODO: make tage to a vector
 					(+ 1 (*-> "yaml_event_t" (&event) "start_mark.line" size_t))
 					(+ 1 (*-> "yaml_event_t" (&event) "start_mark.column" size_t)))
-					"all tags tag will be ignored and always return the literal value"))
+					"yaml-tag is not supported"))
 			(cond
 				((= event YAML_NO_EVENT)
 					(error (sprintf "You should never go into this event ~S"
@@ -312,16 +315,15 @@
 ;		((pair? yaml) (cons (fixed-mapping (car yaml)) (fixed-mapping (cdr yaml))))
 ;		(else (if (procedure? yaml) (fixed-mapping (yaml)) yaml))))
 
-
 (define (mapping-ordered-yaml<- . yaml><)
 	(if (null? yaml><) (error "no yaml provided"))
 	(define yaml (car yaml><))
-	(define >< (argparse (cdr yaml><) '() '(#:forword-left)))
+	(define >< (argparse (cdr yaml><) '() '(#:swap-when)))
 	(let
 		(
-			(forword-left (if (assoc #:forword-left (cdr ><))
-				(cdr (assoc #:forword-left (cdr ><)))
-				(lambda (l r) (string<? (->string (car l)) (->string (car r))))))
+			(swap-when (if (assoc #:swap-when (cdr ><))
+				(cdr (assoc #:swap-when (cdr ><)))
+				(lambda (l r) (string>? (->string (car l)) (->string (car r))))))
 		)
 
 		(define (sort <>)
@@ -329,8 +331,8 @@
 				(define (:insert <l> ? <r>)
 					(cond
 						((null? <r>) (reverse (cons ? <l>)))
-						((forword-left ? (car <r>)) (append (reverse <l>) (list ?) <r>))
-						(else (:insert (cons (car <r>) <l>) ? (cdr <r>)))))
+						((swap-when ? (car <r>)) (:insert (cons (car <r>) <l>) ? (cdr <r>)))
+						(else (append (reverse <l>) (list ?) <r>))))
 				(:insert '() ? <>))
 			(define (:sort todo done)
 				(cond
@@ -350,8 +352,24 @@
 					(let ((yaml (yaml)))
 						(:mapping-ordered-yaml<- (sort yaml)))
 					yaml))))
-		(:mapping-ordered-yaml<- yaml)
-))
+		(:mapping-ordered-yaml<- yaml)))
+
+(define (in? == mapping key)
+	(if (not (procedure? mapping))
+		(error "try to find a key in a non mapping object" mapping))
+	(let ((mapping (mapping)))
+		(if (not (list mapping))
+			(error "try to find a key in a non mapping object" mapping))
+		(define (:in? mapping)
+			(cond
+				((null? mapping) #f)
+				((not (pair? (car mapping))) (:in? (cdr mapping)))
+				((== (car (car mapping)) key) (car mapping))
+				(else (:in? (cdr mapping)))))
+		(:in? mapping)))
+(define (yaml-mapping-in? mapping key) (in? equal? mapping key))
+(define (yaml-mapping-in?? mapping key) (in? eqv? mapping key))
+(define (yaml-mapping-in??? mapping key) (in? eq? mapping key))
 
 (define (yaml-string<- . yaml><)
 	(if (null? yaml><) (error "no yaml provided"))
@@ -394,14 +412,28 @@
 
 (define yaml (yaml<-))
 ;(write/ yaml)
-;(write/ (mapping-ordered-yaml<- (list-ref yaml 0) `(#:forword-left . ,(lambda (l r) (string>? (->string l) (->string r))))))
+
+;(write/ (mapping-ordered-yaml<- (list-ref yaml 0)
+;	`(#:swap-when .
+;		,(lambda (l r)
+;			(string>?
+;				(substring (->string (car l)) 1)
+;				(substring (->string (car r)) 1)
+;			)
+;		)
+;	)))
+
 (write/ (mapping-ordered-yaml<- (list-ref yaml 0)))
 (write/ (mapping-ordered-yaml<- (list-ref yaml 1)))
 
-(write (equal?
+(write/ (equal?
 (mapping-ordered-yaml<- (list-ref yaml 0))
 (mapping-ordered-yaml<- (list-ref yaml 1))
 ))
+
+;(write/
+;(yaml-mapping-in? (list-ref yaml 0) "winot exi")
+;)
 
 ;(write/
 ;(yaml-string<- yaml

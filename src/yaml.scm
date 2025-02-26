@@ -17,7 +17,6 @@
 (import (chicken string))
 (import (chicken irregex))
 
-(foreign-declare "#include <string.h>")
 (foreign-declare "#include <yaml.h>")
 
 (define-syntax foreign-value-index (syntax-rules ()

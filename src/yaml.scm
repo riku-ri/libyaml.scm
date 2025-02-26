@@ -1,4 +1,9 @@
-(module libyaml ()
+(module (libyaml)
+	(
+		yaml<-
+		yaml-string<-
+		mapping-ordered-yaml<-
+	)
 
 (import scheme)
 (import (chicken base))
@@ -65,7 +70,8 @@
 (define yaml_event_delete (foreign-lambda void "yaml_event_delete" (c-pointer "yaml_event_t")))
 (define yaml_parser_delete (foreign-lambda void "yaml_parser_delete" (c-pointer "yaml_parser_t")))
 
-(define-syntax write/ (syntax-rules () ((write/ towrite ...) (let () (write towrite ...) (print "")))))
+;; FOR test
+;(define-syntax write/ (syntax-rules () ((write/ towrite ...) (let () (write towrite ...) (print "")))))
 
 (define (argparse <> <without-value> <with-value>)
 	(if (not (list? <>)) (error "argument is not a list" <>))
@@ -92,7 +98,7 @@
 				pointer
 			))))
 
-(define (libyaml:read . ><)
+(define (yaml<- . ><)
 	(let*
 		(
 			(>< (argparse >< '() (list #:input #:encoding)))
@@ -108,17 +114,6 @@
 			(clear (lambda ()
 				(close-input-port (current-input-port))
 				(yaml_event_delete (&event)) (yaml_parser_delete (&parser))))
-			(@enum ; construct an association list that contain (#:string . (symbol->string))
-				((lambda (@) (@ @))
-					(lambda (?) (lambda (<enum>)
-						(cond
-							((null? <enum>) '())
-							(else (cons
-								(cons
-									(eval (car <enum>))
-									; ERR: when export as module, the symbol is not symbols defined before
-									(list (cons #:string (symbol->string (car <enum>)))))
-								((? ?) (cdr <enum>)))))))))
 			(c-string-or-empty (lambda (tocheck) (let* ((str tocheck)) (if str str ""))))
 			(yaml-parser-parse
 				(lambda (parser event)
@@ -177,7 +172,7 @@
 					(sprintf "enable encodings should be in ~A"
 						(map cdr >yaml_encoding_e<)))))
 		(define <anchor> (list))
-		(define (:libyaml:read event)
+		(define (:yaml<- event)
 			(if
 				(or
 					(*-> "yaml_event_t" (&event) "data.scalar.tag" c-string)
@@ -250,7 +245,7 @@
 									((= event YAML_STREAM_END_EVENT) '())
 									; If yaml-parser-parse is later then check YAML_SEQUENCE_END_EVENT,
 									; it will return an undefined value but not '() here
-									(else (let ((<< (cons (:libyaml:read event) ((@ @))))) <<)))))))
+									(else (let ((<< (cons (:yaml<- event) ((@ @))))) <<)))))))
 					))
 				((= event YAML_DOCUMENT_START_EVENT)
 					(
@@ -259,13 +254,13 @@
 							(cond
 								((= event YAML_DOCUMENT_END_EVENT) last)
 								(else
-									; ((@ @) (:libyaml:read event))
+									; ((@ @) (:yaml<- event))
 									(error
 										(cdr (assoc #:string (cdr (assoc event >yaml_event_type_e<))))
 										"YAML_DOCUMENT_END_EVENT does not appear after twice yaml_parser_parse from YAML_DOCUMENT_START_EVENT"
 										"This may be a bug in libyaml itself, it was supposed to generate a parser error here"
 									)))))))
-						(let* ((<< (:libyaml:read (yaml-parser-parse (&parser) (&event))))) <<)
+						(let* ((<< (:yaml<- (yaml-parser-parse (&parser) (&event))))) <<)
 					))
 				((= event YAML_SEQUENCE_START_EVENT)
 					(
@@ -280,7 +275,7 @@
 								(cond
 									((= event YAML_SEQUENCE_END_EVENT) '())
 									(else
-										(let ((<< (cons (:libyaml:read event) ((@ @)))))
+										(let ((<< (cons (:yaml<- event) ((@ @)))))
 											(if anchor (if (not (assoc anchor <anchor>)) (set! <anchor> (cons (cons anchor <<) <anchor>))))
 											<<)
 									))))))
@@ -297,67 +292,78 @@
 											(else
 												(let* ; Use (let*) to make sure value is after key
 													(
-														(k (:libyaml:read event))
-														(v (:libyaml:read (yaml-parser-parse (&parser) (&event))))
+														(k (:yaml<- event))
+														(v (:yaml<- (yaml-parser-parse (&parser) (&event))))
 													)
 													(let ((<< (cons (cons k v) ((@ @))))) <<))))))))))
 						)
 						(let ((mapping (lambda () mapping)))
-							(if anchor (if (not (assoc anchor <anchor>)) (set! <anchor> (cons (cons anchor mapping) <anchor>))))
+							(if anchor
+								(if (not (assoc anchor <anchor>))
+								(set! <anchor> (cons (cons anchor mapping) <anchor>))))
 							mapping))) ; Use (lambda) to distinguish yaml-list and yaml-mapping
 			) ; (cond)
 		)
-		(:libyaml:read (yaml-parser-parse (&parser) (&event)))))
+		(:yaml<- (yaml-parser-parse (&parser) (&event)))))
 
-;(define (libyaml:fixed-mapping yaml)
+;(define (fixed-mapping yaml)
 ;	(cond
-;		((list? yaml) (map libyaml:fixed-mapping yaml))
-;		((pair? yaml) (cons (libyaml:fixed-mapping (car yaml)) (libyaml:fixed-mapping (cdr yaml))))
-;		(else (if (procedure? yaml) (libyaml:fixed-mapping (yaml)) yaml))))
+;		((list? yaml) (map fixed-mapping yaml))
+;		((pair? yaml) (cons (fixed-mapping (car yaml)) (fixed-mapping (cdr yaml))))
+;		(else (if (procedure? yaml) (fixed-mapping (yaml)) yaml))))
 
-(define (libyaml:ordered-mapping . yaml><)
+
+(define (mapping-ordered-yaml<- . yaml><)
 	(if (null? yaml><) (error "no yaml provided"))
 	(define yaml (car yaml><))
-	(define >< (argparse (cdr yaml><) '() '(#:switch)))
+	(define >< (argparse (cdr yaml><) '() '(#:forword-left)))
 	(let
 		(
-			(switch (if (assoc #:switch (cdr ><))
-				(cdr ><)
-				(lambda (l r) (string>? (sprintf "~S" (car l)) (sprintf "~S" (car r))))))
+			(forword-left (if (assoc #:forword-left (cdr ><))
+				(cdr (assoc #:forword-left (cdr ><)))
+				(lambda (l r) (string<? (->string (car l)) (->string (car r))))))
 		)
 
 		(define (sort <>)
-			(define (:sort ^ ... <<)
+			(define (insert ? <>)
+				(define (:insert <l> ? <r>)
+					(cond
+						((null? <r>) (reverse (cons ? <l>)))
+						((forword-left ? (car <r>)) (append (reverse <l>) (list ?) <r>))
+						(else (:insert (cons (car <r>) <l>) ? (cdr <r>)))))
+				(:insert '() ? <>))
+			(define (:sort todo done)
 				(cond
-					((null? ...) (cons ^ <<))
-					(else
-						(if (switch ^ (car ...))
-							(:sort (car ...) (cdr ...) (cons ^ <<))
-							(:sort ^ (cdr ...) (cons (car ...) <<))))))
-			(if (null? <>) <> (:sort (car <>) (cdr <>) '())))
-		(define (:libyaml:ordered-mapping yaml)
+					((null? todo) done)
+					(else (:sort (cdr todo) (insert (car todo) done)))))
+			(:sort <> '()))
+
+		(define (:mapping-ordered-yaml<- yaml)
 			(cond
 				((null? yaml) '())
-				((list? yaml) (map :libyaml:ordered-mapping yaml))
-				((pair? yaml) (cons (:libyaml:ordered-mapping (car yaml)) (:libyaml:ordered-mapping (cdr yaml))))
+				((list? yaml) (map :mapping-ordered-yaml<- yaml))
+				((pair? yaml)
+					(cons
+						(:mapping-ordered-yaml<- (car yaml))
+						(:mapping-ordered-yaml<- (cdr yaml))))
 				(else (if (procedure? yaml)
 					(let ((yaml (yaml)))
-						(:libyaml:ordered-mapping (sort yaml)))
+						(:mapping-ordered-yaml<- (sort yaml)))
 					yaml))))
-		(:libyaml:ordered-mapping yaml)
+		(:mapping-ordered-yaml<- yaml)
 ))
 
-(define (libyaml:dump . yaml><)
+(define (yaml-string<- . yaml><)
 	(if (null? yaml><) (error "no yaml provided"))
 	(let
 		(
 			(yaml (car yaml><))
 			(>< (argparse
 				(cdr yaml><)
-				'(#:string #:oneline #:1-document-wrap)
+				'(#:oneline #:1-document-wrap)
 				'(#:port #:indent)))
 		)
-		(define (:libyaml:dump-document yaml)
+		(define (:dump-document yaml)
 			(cond
 				((null? yaml) "~") ; TODO
 				((procedure? yaml) '()) ; TODO
@@ -374,15 +380,31 @@
 					))) yaml))))
 		(append
 			(if (or (> (length yaml) 1) (member #:1-document-wrap (car ><))) '("---") '())
-			(flatten (join (map list (map :libyaml:dump-document yaml)) '("..." "---")))
+			(flatten (join (map list (map :dump-document yaml)) '("..." "---")))
 			(if (or (> (length yaml) 1) (member #:1-document-wrap (car ><))) '("...") '()))))
 
-(define yaml (libyaml:read))
-(write/ yaml)
-;(write/
-;;(libyaml:dump yaml #:1-document-wrap)
-;(libyaml:dump yaml)
-;)
-(write/ (libyaml:ordered-mapping yaml))
-
 )
+
+(import libyaml)
+(import (chicken string))
+
+(define-syntax write/ (syntax-rules ()
+	((write/ towrite ...)
+		(let () (write towrite ...) (print "")))))
+
+(define yaml (yaml<-))
+;(write/ yaml)
+;(write/ (mapping-ordered-yaml<- (list-ref yaml 0) `(#:forword-left . ,(lambda (l r) (string>? (->string l) (->string r))))))
+(write/ (mapping-ordered-yaml<- (list-ref yaml 0)))
+(write/ (mapping-ordered-yaml<- (list-ref yaml 1)))
+
+(write (equal?
+(mapping-ordered-yaml<- (list-ref yaml 0))
+(mapping-ordered-yaml<- (list-ref yaml 1))
+))
+
+;(write/
+;(yaml-string<- yaml
+;	#:1-document-wrap
+;)
+;)

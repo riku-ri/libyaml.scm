@@ -3,9 +3,9 @@
 		yaml<-
 		yaml-string<-
 		mapping-ordered-yaml<-
-		yaml-mapping-in?
-		yaml-mapping-in??
-		yaml-mapping-in???
+		in-yaml-mapping?
+		in-yaml-mapping??
+		in-yaml-mapping???
 
 		YAML_ANY_ENCODING
 		YAML_UTF8_ENCODING
@@ -78,7 +78,7 @@
 (define yaml_parser_delete (foreign-lambda void "yaml_parser_delete" (c-pointer "yaml_parser_t")))
 
 ;; FOR test
-;(define-syntax write/ (syntax-rules () ((write/ towrite ...) (let () (write towrite ...) (print "")))))
+(define-syntax write/ (syntax-rules () ((write/ towrite ...) (let () (write towrite ...) (print "")))))
 
 (define (argparse <> <without-value> <with-value>)
 	(if (not (list? <>)) (error "argument is not a list" <>))
@@ -371,76 +371,85 @@
 				((== (car (car mapping)) key) (car mapping))
 				(else (:in? (cdr mapping)))))
 		(:in? mapping)))
-(define (yaml-mapping-in? mapping key) (in? equal? mapping key))
-(define (yaml-mapping-in?? mapping key) (in? eqv? mapping key))
-(define (yaml-mapping-in??? mapping key) (in? eq? mapping key))
+(define (in-yaml-mapping? mapping key) (in? equal? mapping key))
+(define (in-yaml-mapping?? mapping key) (in? eqv? mapping key))
+(define (in-yaml-mapping??? mapping key) (in? eq? mapping key))
 
 (define (yaml-string<- . yaml><)
 	(if (null? yaml><) (error "no yaml provided"))
-	(let
+	(let*
 		(
 			(yaml (car yaml><))
 			(>< (argparse
 				(cdr yaml><)
-				'(#:oneline #:1-document-wrap)
-				'(#:port #:indent)))
+				'(#:oneline #:wrap-1-document)
+				'(#:indent #:null)))
+			(null (if (assoc #:null (cdr ><)) (cdr (assoc #:null (cdr ><))) "~"))
+			(
+				indent
+				(if (assoc #:indent (cdr ><))
+					(let ((indent (cdr (assoc #:indent (cdr ><)))))
+						(if
+							(or
+								(string? indent)
+								(and (integer? indent) (> indent 0))
+							)
+							(if (string? indent) indent (make-string indent #\space)))
+							(error "indent is not a positive integer or string" indent))
+					"  ")
+			)
 		)
-		(define (:dump-document yaml)
-			(cond
-				((null? yaml) "~") ; TODO
-				((procedure? yaml) '()) ; TODO
-				((list? yaml) '() ; Note that '() is also list
-				) ; TODO
-				(else (let((yaml (cond
-					((string? yaml) (string-split yaml "\n" #t))
-					((number? yaml)
+		(define (repeat-string str time)
+			(if (= time 0)
+				""
+				(string-append str (repeat-string str (- time 1)))))
+		(define (yaml-document-string<- yaml)
+			(define (:yaml-document-string<- yaml shift)
+				(cond
+					((null? yaml) null)
+					((procedure? yaml) #:todo)
+					((list? yaml) (let* ((yaml (map :yaml-document-string<- yaml)))
+					; Note that '() is also list
+						(if (member #:oneline (car ><))
+							(string-append "[" (string-intersperse yaml ",") "]")
+							#:todo)
+					)) ; TODO
+					(else (let((yaml
 						(cond
-							((nan? yaml) ".nan")
-							((infinite? yaml) (if (> yaml 0) "+.inf" "-.inf"))
-							(else (number->string yaml))))
-					((boolean? yaml) (if yaml "true" "false"))
-					))) yaml))))
-		(append
-			(if (or (> (length yaml) 1) (member #:1-document-wrap (car ><))) '("---") '())
-			(flatten (join (map list (map :dump-document yaml)) '("..." "---")))
-			(if (or (> (length yaml) 1) (member #:1-document-wrap (car ><))) '("...") '()))))
+							((string? yaml)
+								(if
+									(and
+										(member #:oneline (car ><))
+										(> (length (string-split yaml "\n" #t)) 1)
+									)
+									; if #:oneline is set and the string contain more than 1 lines
+										; write the string by ~S, to convert newline to literal \n
+									(sprintf "~S" yaml)
+									yaml))
+							((number? yaml)
+								(cond
+									((nan? yaml) ".nan")
+									((infinite? yaml) (if (> yaml 0) "+.inf" "-.inf"))
+									(else (number->string yaml))))
+							((boolean? yaml) (if yaml "true" "false"))
+						))) yaml))))
+			(:yaml-document-string<- yaml 0))
+			(map yaml-document-string<- yaml)))
 
 )
 
 (import libyaml)
-(import (chicken string))
-
+(import (chicken pretty-print))
 (define-syntax write/ (syntax-rules ()
 	((write/ towrite ...)
 		(let () (write towrite ...) (print "")))))
 
 (define yaml (yaml<-))
-;(write/ yaml)
 
-;(write/ (mapping-ordered-yaml<- (list-ref yaml 0)
-;	`(#:swap-when .
-;		,(lambda (l r)
-;			(string>?
-;				(substring (->string (car l)) 1)
-;				(substring (->string (car r)) 1)
-;			)
-;		)
-;	)))
+(print
 
-(write/ (mapping-ordered-yaml<- (list-ref yaml 0)))
-(write/ (mapping-ordered-yaml<- (list-ref yaml 1)))
-
-(write/ (equal?
-(mapping-ordered-yaml<- (list-ref yaml 0))
-(mapping-ordered-yaml<- (list-ref yaml 1))
+(car (yaml-string<- yaml
+	#:oneline
 ))
 
-;(write/
-;(yaml-mapping-in? (list-ref yaml 0) "winot exi")
-;)
-
-;(write/
-;(yaml-string<- yaml
-;	#:1-document-wrap
-;)
-;)
+)

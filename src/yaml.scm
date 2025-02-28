@@ -407,7 +407,23 @@
 			(define (:yaml-document-string<- yaml shift)
 				(cond
 					((null? yaml) null)
-					((procedure? yaml) #:todo)
+					((procedure? yaml) (let* ((yaml (yaml)))
+						(if (member #:oneline (car ><))
+							(string-append
+								"{"
+								(string-intersperse
+									(map
+										(lambda (pair)
+											(string-append
+												(yaml-document-string<- (car pair))
+												": "
+												; Note that whitout space after : is a string but not mapping
+												(yaml-document-string<- (cdr pair))))
+										yaml)
+									",")
+								"}")
+							#:todo)
+					))
 					((list? yaml) (let* ((yaml (map :yaml-document-string<- yaml)))
 					; Note that '() is also list
 						(if (member #:oneline (car ><))
@@ -420,10 +436,13 @@
 								(if
 									(and
 										(member #:oneline (car ><))
-										(> (length (string-split yaml "\n" #t)) 1)
+										(or
+											(> (length (string-split yaml "\n" #t)) 1)
+											(member #\, (string->list yaml))
+											(member #\" (string->list yaml))
+											(member #\' (string->list yaml))
+										)
 									)
-									; if #:oneline is set and the string contain more than 1 lines
-										; write the string by ~S, to convert newline to literal \n
 									(sprintf "~S" yaml)
 									yaml))
 							((number? yaml)
@@ -434,7 +453,17 @@
 							((boolean? yaml) (if yaml "true" "false"))
 						))) yaml))))
 			(:yaml-document-string<- yaml 0))
-			(map yaml-document-string<- yaml)))
+		(string-append
+			(if (or (member #:wrap-1-document (car ><)) (> (length yaml) 1)) "---\n" "")
+			(if (member #:oneline (car ><))
+				(string-intersperse
+					(map yaml-document-string<- yaml)
+					"\n...\n---\n")
+				#:todo)
+			(if (or (member #:wrap-1-document (car ><)) (> (length yaml) 1)) "\n...\n" "")
+		)
+	) ; let
+)
 
 )
 
@@ -448,8 +477,8 @@
 
 (print
 
-(car (yaml-string<- yaml
+(yaml-string<- yaml
 	#:oneline
-))
+)
 
 )

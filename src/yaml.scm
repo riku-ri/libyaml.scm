@@ -211,8 +211,9 @@
 						(let
 							(
 								(<< (if (*-> "yaml_event_t" (&event) "data.scalar.plain_implicit" bool)
-								; XXX: implicit yaml-tag value also not set plain_implicit. But yaml-tag will be ignored and always return the literal value
+								; XXX: implicit yaml-tag value also not set plain_implicit. But yaml-tag will generate an error
 									(cond
+										; Regular expression is from https://yaml.org/spec/1.2.2/
 										((or (= (string-length <<) 0) (irregex-match? "null|Null|NULL|~" <<)) '())
 										((irregex-match? "true|True|TRUE|false|False|FALSE" <<)
 											(let* ((^ (char-downcase (string-ref << 0))))
@@ -475,10 +476,13 @@
 
 (define yaml (yaml<-))
 
-(print
+(with-output-to-file
 
+"tmp.output"
+(lambda () (display
 (yaml-string<- yaml
 	#:oneline
 )
+))
 
 )

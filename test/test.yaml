@@ -65,12 +65,19 @@
 ## XXX: it is recommended to test with rendom number too
 
 # TEST yaml
-
-- a
-- c
-- - f
-  - g
-  - - h
-  - i
-- d
-- - - e
+key: value,
+?
+  [a,b,c]
+: str
+another key:
+  also: "check this\""
+  zzz: too mo'r'e
+  test: {}
+more one: enough
+---
+another key:
+  zzz: too more
+  also: check this
+  test: {}
+more one: enough
+key: value

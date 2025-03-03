@@ -429,7 +429,7 @@
 				""
 				(string-append str (repeat-string str (- time 1)))))
 		(define (yaml-document-string<- yaml)
-			(define (:yaml-document-string<- yaml shift)
+			(define (:yaml-document-string<- yaml)
 				(cond
 					((null? yaml) null)
 					((procedure? yaml) (let* ((yaml (yaml)))
@@ -447,34 +447,63 @@
 										yaml)
 									",")
 								"}")
-							#:todo)
-					))
-					((list? yaml) (let* ((yaml (map :yaml-document-string<- yaml)))
-					; Note that '() is also list
-						(if ?oneline
-							(string-append "[" (string-intersperse yaml ",") "]")
 							#:todo
 						)
-					)) ; TODO
+					))
+					((list? yaml)
+					; Note that '() is also list
+						(if ?oneline
+							(string-append
+								"["
+								(string-intersperse (map :yaml-document-string<- yaml) ",")
+								"]"
+							)
+							(let* ((yaml (map :yaml-document-string<- yaml)))
+								(string-intersperse
+									(map
+										(lambda (?)
+											(string-append "- " ?)) ; FIXME: multiline is not shift here
+										yaml)
+									"\n") ; TODO: distinguish linebreak
+							)
+						)
+					)
 					(else (let((yaml
 						(cond
 							((string? yaml)
-								(if
-									(or
-										(not (string? (car (yaml<- `(#:input . ,yaml)))))
-										; something like "null" ".nan" "1.5"
-										(and
-											?oneline
-											(or
-												(> (length (string-split yaml "\n" #t)) 1)
-												(member #\, (string->list yaml))
-												(member #\" (string->list yaml))
-												(member #\' (string->list yaml))
-											)
-										)
+								(let*
+									(
+										(linebreak (lambda () (let ((yaml (string->list yaml))) (cond
+											((and (member #\return yaml) (member #\newline yaml)) "\r\n")
+											((member #\return yaml) "\r")
+											((member #\newline yaml) "\n")
+											(else "\n")))))
 									)
-									(sprintf "~S" yaml)
-									yaml))
+									(cond
+										(?oneline
+											(if
+												(or
+													(not (string? (car (yaml<- `(#:input . ,yaml)))))
+													(> (length (string-split yaml (linebreak) #t)) 1)
+													(member #\, (string->list yaml))
+													(member #\" (string->list yaml))
+													(member #\' (string->list yaml))
+												)
+												(sprintf "~S" yaml)
+												yaml))
+										((not (string? (car (yaml<- `(#:input . ,yaml)))))
+											(sprintf "~S" yaml))
+										((> (length (string-split yaml (linebreak) #t)) 1)
+											(string-append
+												"|-" (linebreak)
+												(string-intersperse
+													(map
+														(lambda (?) (string-append indent ?))
+															(string-split yaml (linebreak) #t))
+													(linebreak))
+											))
+										(else yaml)
+									)))
 							((number? yaml)
 								(cond
 									((nan? yaml) ".nan")
@@ -482,13 +511,16 @@
 									(else (number->string yaml))))
 							((boolean? yaml) (if yaml "true" "false"))
 						))) yaml))))
-			(:yaml-document-string<- yaml 0))
-		(string-append
-			(if (or ?wrap-1-document (> (length yaml) 1)) "---\n" "")
-			(string-intersperse
-				(map yaml-document-string<- yaml)
-				"\n...\n---\n")
-			(if (or ?wrap-1-document (> (length yaml) 1)) "\n...\n" "")
+			(:yaml-document-string<- yaml))
+		(if ?oneline
+			(string-append
+				(if (or ?wrap-1-document (> (length yaml) 1)) "---\n" "")
+				(string-intersperse
+					(map yaml-document-string<- yaml)
+					"\n...\n---\n")
+				(if (or ?wrap-1-document (> (length yaml) 1)) "\n...\n" "")
+			)
+			(map yaml-document-string<- yaml)
 		)
 	) ; let
 )
@@ -505,8 +537,7 @@
 (define yaml
 (yaml<-)
 )
-(write
+(print
 (yaml-string<- yaml
-	#:oneline
 )
 )

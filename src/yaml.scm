@@ -21,6 +21,7 @@
 (import (chicken format))
 (import (chicken string))
 (import (chicken irregex))
+(import (chicken memory))
 
 (foreign-declare "#include <yaml.h>")
 
@@ -116,16 +117,17 @@
 					(string->number ?)
 					(error "(string->number) convert error" ?))))
 			(memset (foreign-lambda c-pointer "memset" c-pointer int size_t))
-			(&parser (foreign-lambda* (c-pointer "yaml_parser_t") ()
-				"static yaml_parser_t yaml_parser; C_return(&yaml_parser);"))
-			(&event (foreign-lambda* (c-pointer "yaml_event_t") ()
-				"static yaml_event_t yaml_event; C_return(&yaml_event);"))
+			(&parser (allocate (foreign-type-size "yaml_parser_t")))
+			(&event (allocate (foreign-type-size "yaml_event_t")))
 			(clear (lambda ()
 				(if ?input
 					(let ((input (cdr ?input)))
 						(if (input-port? input) (close-input-port input))))
 				(close-input-port (current-input-port))
-				(yaml_event_delete (&event)) (yaml_parser_delete (&parser))))
+				(yaml_event_delete &event)
+				(yaml_parser_delete &parser)
+				(free &parser)
+				(free &event)))
 			(c-string-or-empty (lambda (tocheck) (let* ((str tocheck)) (if str str ""))))
 			(yaml-parser-parse
 				(lambda (parser event)
@@ -137,11 +139,11 @@
 									(errmessage
 										(sprintf
 											"[~A] ~A ~A at [line:~A , colunm:~A]"
-											(*-> "yaml_parser_t" (&parser) "error" yaml_error_type_t)
-											(c-string-or-empty (*-> "yaml_parser_t" (&parser) "problem" c-string))
-											(c-string-or-empty (*-> "yaml_parser_t" (&parser) "context" c-string))
-											(+ 1 (*-> "yaml_parser_t" (&parser) "problem_mark.line" size_t))
-											(+ 1 (*-> "yaml_parser_t" (&parser) "problem_mark.column" size_t))))
+											(*-> "yaml_parser_t" &parser "error" yaml_error_type_t)
+											(c-string-or-empty (*-> "yaml_parser_t" &parser "problem" c-string))
+											(c-string-or-empty (*-> "yaml_parser_t" &parser "context" c-string))
+											(+ 1 (*-> "yaml_parser_t" &parser "problem_mark.line" size_t))
+											(+ 1 (*-> "yaml_parser_t" &parser "problem_mark.column" size_t))))
 								)
 							(clear)
 							(error errmessage)
@@ -152,22 +154,22 @@
 					)))
 		)
 
-		(memset (&parser) 0 (foreign-type-size "yaml_parser_t"))
-		(memset (&event) 0 (foreign-type-size "yaml_event_t"))
+		(memset &parser 0 (foreign-type-size "yaml_parser_t"))
+		(memset &event 0 (foreign-type-size "yaml_event_t"))
 
-		(let* ((<< (yaml_parser_initialize (&parser)))) (if (not (= 1 <<))
+		(let* ((<< (yaml_parser_initialize &parser))) (if (not (= 1 <<))
 		; According to comment in <yaml.h>, yaml_parser_initialize() return 1 when succeeded
 			(error (sprintf "[~A] with error [~A]"
 				<<
-				(*-> "yaml_parser_t" (&parser) "error" yaml_error_type_t)))))
+				(*-> "yaml_parser_t" &parser "error" yaml_error_type_t)))))
 		(let ((port->FILE* (foreign-lambda c-pointer "C_port_file" scheme-object)))
 			(if ?input
 				(let ((input (cdr ?input)))
 					(cond
 						((string? input)
-							(yaml_parser_set_input_string (&parser) input (string-length input)))
+							(yaml_parser_set_input_string &parser input (string-length input)))
 						((input-port? input)
-							(yaml_parser_set_input_file (&parser) (port->FILE* input)))
+							(yaml_parser_set_input_file &parser (port->FILE* input)))
 						(else (error
 							(string-intersperse
 								'(
@@ -178,16 +180,16 @@
 							)
 							input))
 					))
-				(yaml_parser_set_input_file (&parser) (port->FILE* (current-input-port)))))
+				(yaml_parser_set_input_file &parser (port->FILE* (current-input-port)))))
 
 		(if ?encoding
 			(let ((encoding (cdr ?encoding)))
-				(yaml_parser_set_encoding (&parser) encoding)))
+				(yaml_parser_set_encoding &parser encoding)))
 
 		(if ?encoding
 			(if (not
 				(=
-					(*-> "yaml_parser_t" (&parser) "encoding" yaml_encoding_t)
+					(*-> "yaml_parser_t" &parser "encoding" yaml_encoding_t)
 					(cdr ?encoding)))
 				(error
 					(sprintf "cannot set encoding to ~S" (cdr ?encoding))
@@ -197,13 +199,13 @@
 		(define (:yaml<- event)
 			(if
 				(or
-					(*-> "yaml_event_t" (&event) "data.scalar.tag" c-string)
-					(*-> "yaml_event_t" (&event) "data.sequence_start.tag" c-string)
-					(*-> "yaml_event_t" (&event) "data.mapping_start.tag" c-string)
+					(*-> "yaml_event_t" &event "data.scalar.tag" c-string)
+					(*-> "yaml_event_t" &event "data.sequence_start.tag" c-string)
+					(*-> "yaml_event_t" &event "data.mapping_start.tag" c-string)
 				)
 				(error (sprintf "tag at [line:~A , colunm:~A]" ; TODO: make tage to a vector
-					(+ 1 (*-> "yaml_event_t" (&event) "start_mark.line" size_t))
-					(+ 1 (*-> "yaml_event_t" (&event) "start_mark.column" size_t)))
+					(+ 1 (*-> "yaml_event_t" &event "start_mark.line" size_t))
+					(+ 1 (*-> "yaml_event_t" &event "start_mark.column" size_t)))
 					"yaml-tag is not supported"))
 			(cond
 				((= event YAML_NO_EVENT)
@@ -212,7 +214,7 @@
 				((= event YAML_ALIAS_EVENT)
 					(let
 						(
-							(anchor (*-> "yaml_event_t" (&event) "data.alias.anchor" c-string))
+							(anchor (*-> "yaml_event_t" &event "data.alias.anchor" c-string))
 						)
 						(if (not (assoc anchor <anchor>))
 							(error "No reference or circular reference to anchor" anchor))
@@ -220,12 +222,12 @@
 				((= event YAML_SCALAR_EVENT)
 					(let*
 						(
-							(anchor (*-> "yaml_event_t" (&event) "data.scalar.anchor" c-string))
-							(<< (*-> "yaml_event_t" (&event) "data.scalar.value" c-string))
+							(anchor (*-> "yaml_event_t" &event "data.scalar.anchor" c-string))
+							(<< (*-> "yaml_event_t" &event "data.scalar.value" c-string))
 						)
 						(let
 							(
-								(<< (if (*-> "yaml_event_t" (&event) "data.scalar.plain_implicit" bool)
+								(<< (if (*-> "yaml_event_t" &event "data.scalar.plain_implicit" bool)
 								; XXX: implicit yaml-tag value also not set plain_implicit. But yaml-tag will generate an error
 									(cond
 										; Regular expression is from https://yaml.org/spec/1.2.2/
@@ -263,7 +265,7 @@
 				((= event YAML_STREAM_START_EVENT)
 					(
 						((lambda (@) (@ @)) (lambda (@) (lambda ()
-							(let* ((event (yaml-parser-parse (&parser) (&event))))
+							(let* ((event (yaml-parser-parse &parser &event)))
 								(cond
 									((= event YAML_STREAM_END_EVENT) '())
 									; If yaml-parser-parse is later then check YAML_SEQUENCE_END_EVENT,
@@ -273,7 +275,7 @@
 				((= event YAML_DOCUMENT_START_EVENT)
 					(
 						((lambda (@) (@ @)) (lambda (@) (lambda (last)
-							(let* ((event (yaml-parser-parse (&parser) (&event))))
+							(let* ((event (yaml-parser-parse &parser &event)))
 							(cond
 								((= event YAML_DOCUMENT_END_EVENT) last)
 								(else
@@ -283,17 +285,17 @@
 										"YAML_DOCUMENT_END_EVENT does not appear after twice yaml_parser_parse from YAML_DOCUMENT_START_EVENT"
 										"This may be a bug in libyaml itself, it was supposed to generate a parser error here"
 									)))))))
-						(let* ((<< (:yaml<- (yaml-parser-parse (&parser) (&event))))) <<)
+						(let* ((<< (:yaml<- (yaml-parser-parse &parser &event)))) <<)
 					))
 				((= event YAML_SEQUENCE_START_EVENT)
 					(
 						((lambda (@) (@ @)) (lambda (@) (lambda ()
 							(let* ; anchor need to be cached before next parse
 								(
-									(anchor (*-> "yaml_event_t" (&event) "data.sequence_start.anchor" c-string))
-									(event (yaml-parser-parse (&parser) (&event)))
+									(anchor (*-> "yaml_event_t" &event "data.sequence_start.anchor" c-string))
+									(event (yaml-parser-parse &parser &event))
 								)
-								; If not get event but use the value in member of (&event), all recursion will end by the most internal YAML_SEQUENCE_END_EVENT
+								; If not get event but use the value in member of &event, all recursion will end by the most internal YAML_SEQUENCE_END_EVENT
 								; YAML_STREAM_START_EVENT has no this problem because stream would never be nested
 								(cond
 									((= event YAML_SEQUENCE_END_EVENT) '())
@@ -306,17 +308,17 @@
 				((= event YAML_MAPPING_START_EVENT)
 					(let*
 						(
-							(anchor (*-> "yaml_event_t" (&event) "data.mapping_start.anchor" c-string))
+							(anchor (*-> "yaml_event_t" &event "data.mapping_start.anchor" c-string))
 							(mapping (
 								((lambda (@) (@ @)) (lambda (@) (lambda ()
-									(let* ((event (yaml-parser-parse (&parser) (&event))))
+									(let* ((event (yaml-parser-parse &parser &event)))
 										(cond
 											((= event YAML_MAPPING_END_EVENT) '())
 											(else
 												(let* ; Use (let*) to make sure value is after key
 													(
 														(k (:yaml<- event))
-														(v (:yaml<- (yaml-parser-parse (&parser) (&event))))
+														(v (:yaml<- (yaml-parser-parse &parser &event)))
 													)
 													(let ((<< (cons (cons k v) ((@ @))))) <<))))))))))
 						)
@@ -327,7 +329,7 @@
 							mapping))) ; Use (lambda) to distinguish yaml-list and yaml-mapping
 			) ; (cond)
 		)
-		(let ((yaml (:yaml<- (yaml-parser-parse (&parser) (&event)))))
+		(let ((yaml (:yaml<- (yaml-parser-parse &parser &event))))
 			(clear)
 			yaml)
 	) ; let

@@ -123,7 +123,6 @@
 				(if ?input
 					(let ((input (cdr ?input)))
 						(if (input-port? input) (close-input-port input))))
-				(close-input-port (current-input-port))
 				(yaml_event_delete &event)
 				(yaml_parser_delete &parser)
 				(free &parser)
@@ -399,6 +398,22 @@
 (define (in-yaml-mapping?? mapping key) (in? eqv? mapping key))
 (define (in-yaml-mapping??? mapping key) (in? eq? mapping key))
 
+(define yaml_emitter_initialize (foreign-lambda int "yaml_emitter_initialize" (c-pointer "yaml_emitter_t")))
+(define yaml_emitter_delete (foreign-lambda void "yaml_emitter_delete" (c-pointer "yaml_emitter_t")))
+(define yaml_emitter_set_output_string (foreign-lambda void "yaml_emitter_set_output_string" (c-pointer "yaml_emitter_t") (c-pointer char) size_t (c-pointer size_t)))
+(define yaml_emitter_set_output_file (foreign-lambda void "yaml_emitter_set_output_file" (c-pointer "yaml_emitter_t") (c-pointer "FILE")))
+(define yaml_emitter_set_encoding (foreign-lambda void "yaml_emitter_set_encoding" (c-pointer "yaml_emitter_t") yaml_encoding_t))
+(define yaml_emitter_set_indent (foreign-lambda void "yaml_emitter_set_indent" (c-pointer "yaml_emitter_t") int))
+(define yaml_emitter_set_width (foreign-lambda void "yaml_emitter_set_width" (c-pointer "yaml_emitter_t") int))
+(define-foreign-type yaml_break_t int)
+(define >yaml_break_e< '())
+(foreign-value-index >yaml_break_e< YAML_ANY_BREAK (foreign-value "YAML_ANY_BREAK" yaml_error_type_t))
+(foreign-value-index >yaml_break_e< YAML_CR_BREAK (foreign-value "YAML_CR_BREAK" yaml_error_type_t))
+(foreign-value-index >yaml_break_e< YAML_LN_BREAK (foreign-value "YAML_LN_BREAK" yaml_error_type_t))
+(foreign-value-index >yaml_break_e< YAML_CRLN_BREAK (foreign-value "YAML_CRLN_BREAK" yaml_error_type_t))
+(define yaml_emitter_set_break (foreign-lambda void "yaml_emitter_set_break" (c-pointer "yaml_emitter_t") yaml_break_t))
+(define yaml_emitter_emit (foreign-lambda int "yaml_emitter_emit" (c-pointer "yaml_emitter_t") (c-pointer "yaml_event_t")))
+
 (define (<-yaml . yaml><)
 	(if (null? yaml><) (error "no yaml provided"))
 	(let*
@@ -406,107 +421,32 @@
 			(yaml (car yaml><))
 			(>< (argparse
 				(cdr yaml><)
-				'(#:oneline #:wrap-1-document)
-				'(#:indent #:null)))
-			(?oneline (member #:oneline (car ><)))
-			(?wrap-1-document (member #:wrap-1-document (car ><)))
-			(?indent (assoc #:indent (cdr ><)))
+				'()
+				'(#:indent #:null #:port)))
+			(?port (assoc #:port (cdr ><)))
+			(memset (foreign-lambda c-pointer "memset" c-pointer int size_t))
+			(&emitter (allocate (foreign-type-size "yaml_emitter_t")))
+			(&event (allocate (foreign-type-size "yaml_event_t")))
+			(clear (lambda ()
+				(if ?port
+					(let ((input (cdr ?port)))
+						(if (input-port? input) (close-input-port input))))
+				(yaml_emitter_delete &emitter)
+				(yaml_event_delete &event)
+				(free &emitter)
+				(free &event)))
 			(?null (assoc #:null (cdr ><)))
 			(null (if ?null (cdr ?null) "~"))
-			(
-				indent
-				(if ?indent
-					(let ((indent (cdr ?indent)))
-						(if
-							(or
-								(string? indent)
-								(and (integer? indent) (> indent 0))
-							)
-							(if (string? indent) indent (make-string indent #\space)))
-							(error "indent is not a positive integer or string" indent))
-					"  ")
-			)
 		)
-		(define (repeat-string str time)
-			(if (= time 0)
-				""
-				(string-append str (repeat-string str (- time 1)))))
 		(define (yaml-document-string<- yaml)
 			(define (:yaml-document-string<- yaml)
 				(cond
 					((null? yaml) null)
-					((procedure? yaml) (let* ((yaml (yaml)))
-						(if ?oneline
-							(string-append
-								"{"
-								(string-intersperse
-									(map
-										(lambda (pair)
-											(string-append
-												(yaml-document-string<- (car pair))
-												": "
-												; Note that whitout space after : is a string but not mapping
-												(yaml-document-string<- (cdr pair))))
-										yaml)
-									",")
-								"}")
-							#:todo
-						)
-					))
-					((list? yaml)
-					; Note that '() is also list
-						(if ?oneline
-							(string-append
-								"["
-								(string-intersperse (map :yaml-document-string<- yaml) ",")
-								"]"
-							)
-							(let* ((yaml (map :yaml-document-string<- yaml)))
-								(string-intersperse
-									(map
-										(lambda (?)
-											(string-append "- " ?)) ; FIXME: multiline is not shift here
-										yaml)
-									"\n") ; TODO: distinguish linebreak
-							)
-						)
-					)
+					((procedure? yaml) (let* ((yaml (yaml))) #:todo))
+					((list? yaml) #:todo)
 					(else (let((yaml
 						(cond
-							((string? yaml)
-								(let*
-									(
-										(linebreak (lambda () (let ((yaml (string->list yaml))) (cond
-											((and (member #\return yaml) (member #\newline yaml)) "\r\n")
-											((member #\return yaml) "\r")
-											((member #\newline yaml) "\n")
-											(else "\n")))))
-									)
-									(cond
-										(?oneline
-											(if
-												(or
-													(not (string? (car (yaml<- `(#:input . ,yaml)))))
-													(> (length (string-split yaml (linebreak) #t)) 1)
-													(member #\, (string->list yaml))
-													(member #\" (string->list yaml))
-													(member #\' (string->list yaml))
-												)
-												(sprintf "~S" yaml)
-												yaml))
-										((not (string? (car (yaml<- `(#:input . ,yaml)))))
-											(sprintf "~S" yaml))
-										((> (length (string-split yaml (linebreak) #t)) 1)
-											(string-append
-												"|-" (linebreak)
-												(string-intersperse
-													(map
-														(lambda (?) (string-append indent ?))
-															(string-split yaml (linebreak) #t))
-													(linebreak))
-											))
-										(else yaml)
-									)))
+							((string? yaml) yaml)
 							((number? yaml)
 								(cond
 									((nan? yaml) ".nan")
@@ -515,16 +455,7 @@
 							((boolean? yaml) (if yaml "true" "false"))
 						))) yaml))))
 			(:yaml-document-string<- yaml))
-		(if ?oneline
-			(string-append
-				(if (or ?wrap-1-document (> (length yaml) 1)) "---\n" "")
-				(string-intersperse
-					(map yaml-document-string<- yaml)
-					"\n...\n---\n")
-				(if (or ?wrap-1-document (> (length yaml) 1)) "\n...\n" "")
-			)
-			(map yaml-document-string<- yaml)
-		)
+		(map yaml-document-string<- yaml)
 	) ; let
 )
 
@@ -538,7 +469,7 @@
 		(let () (write towrite ...) (print "")))))
 
 (define yaml
-(yaml<- `(#:encoding . ,-1))
+(yaml<-)
 )
 (print
 (<-yaml yaml

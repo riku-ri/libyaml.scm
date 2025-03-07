@@ -185,8 +185,9 @@
 		(cond
 			(?encoding
 				(if (not (assoc (cdr ?encoding) >yaml_encoding_e<))
-					(error (sprintf "enable encodings should be in ~A"
-							(map cdr >yaml_encoding_e<))))
+					(error (sprintf "encoding [~S] is not in ~A"
+						(cdr ?encoding)
+						(map cdr >yaml_encoding_e<))))
 				(let ((encoding (cdr ?encoding)))
 					(yaml_parser_set_encoding &parser encoding))
 				(if (not
@@ -537,7 +538,7 @@
 		(let () (write towrite ...) (print "")))))
 
 (define yaml
-(yaml<- `(#:encoding . ,YAML_UTF8_ENCODING))
+(yaml<- `(#:encoding . ,-1))
 )
 (print
 (<-yaml yaml

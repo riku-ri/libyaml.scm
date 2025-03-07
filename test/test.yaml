@@ -64,20 +64,20 @@
 #1e-1
 ## XXX: it is recommended to test with rendom number too
 
-# TEST yaml
-key: value,
-?
-  [a,b,c]
-: str
-another key:
-  also: "check this\""
-  zzz: too mo'r'e
-  test: {}
-more one: enough
----
-another key:
-  zzz: too more
-  also: check this
-  test: {}
-more one: enough
-key: value
+- - .inf
+- - 'line
+
+    line'
+- a
+- b
+- - c
+  - d
+- '.nan'
+- - - - .nan
+      - e
+    - -.inf
+  - 'line
+
+    line'
+- f
+- "null"

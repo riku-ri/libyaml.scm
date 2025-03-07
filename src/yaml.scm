@@ -1,7 +1,7 @@
 (module (libyaml)
 	(
 		yaml<-
-		yaml-string<-
+		<-yaml
 		mapping-ordered-yaml<-
 		in-yaml-mapping?
 		in-yaml-mapping??
@@ -182,19 +182,19 @@
 					))
 				(yaml_parser_set_input_file &parser (port->FILE* (current-input-port)))))
 
-		(if ?encoding
-			(let ((encoding (cdr ?encoding)))
-				(yaml_parser_set_encoding &parser encoding)))
-
-		(if ?encoding
-			(if (not
-				(=
-					(*-> "yaml_parser_t" &parser "encoding" yaml_encoding_t)
-					(cdr ?encoding)))
-				(error
-					(sprintf "cannot set encoding to ~S" (cdr ?encoding))
-					(sprintf "enable encodings should be in ~A"
-						(map cdr >yaml_encoding_e<)))))
+		(cond
+			(?encoding
+				(if (not (assoc (cdr ?encoding) >yaml_encoding_e<))
+					(error (sprintf "enable encodings should be in ~A"
+							(map cdr >yaml_encoding_e<))))
+				(let ((encoding (cdr ?encoding)))
+					(yaml_parser_set_encoding &parser encoding))
+				(if (not
+					(=
+						(*-> "yaml_parser_t" &parser "encoding" yaml_encoding_t)
+						(cdr ?encoding)))
+					(error
+						(sprintf "set encoding to ~S failed" (cdr ?encoding))))))
 		(define <anchor> (list))
 		(define (:yaml<- event)
 			(if
@@ -398,7 +398,7 @@
 (define (in-yaml-mapping?? mapping key) (in? eqv? mapping key))
 (define (in-yaml-mapping??? mapping key) (in? eq? mapping key))
 
-(define (yaml-string<- . yaml><)
+(define (<-yaml . yaml><)
 	(if (null? yaml><) (error "no yaml provided"))
 	(let*
 		(
@@ -537,9 +537,9 @@
 		(let () (write towrite ...) (print "")))))
 
 (define yaml
-(yaml<-)
+(yaml<- `(#:encoding . ,YAML_UTF8_ENCODING))
 )
 (print
-(yaml-string<- yaml
+(<-yaml yaml
 )
 )

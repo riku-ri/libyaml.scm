@@ -40,6 +40,22 @@ main(int argc , char * argv[])
 	return 0;
 }
 
+static int _is_enum(CXType cxtype)
+{
+	enum CXCursorKind typekind = clang_getCursorKind(clang_getTypeDeclaration(cxtype));
+	CXType truetype = clang_getTypedefDeclUnderlyingType(
+		clang_getTypeDeclaration(cxtype)
+	);
+	enum CXCursorKind truetypekind = clang_getCursorKind(
+		clang_getTypeDeclaration(truetype)
+	);
+	if(typekind==CXCursor_EnumDecl || truetypekind==CXCursor_EnumDecl)
+	{
+		return (!0);
+	}
+	return 0;
+}
+
 static int _is_struct(CXType cxtype)
 {
 	enum CXCursorKind typekind = clang_getCursorKind(clang_getTypeDeclaration(cxtype));
@@ -92,14 +108,15 @@ definitions
 	if(0);
 	else if(clang_getCursorKind(cursor)==CXCursor_TypedefDecl)
 	{
-		CXType cxtype = clang_getTypedefDeclUnderlyingType(cursor);
-		enum CXCursorKind typekind = clang_getCursorKind(clang_getTypeDeclaration(cxtype));
+		/* XXX enum may be anonymous, export enum type string is not always valid */
+		//CXType cxtype = clang_getTypedefDeclUnderlyingType(cursor);
+		//enum CXCursorKind typekind = clang_getCursorKind(clang_getTypeDeclaration(cxtype));
 		//CXString cxtype = clang_getTypeSpelling(cxtype);
 		//clang_disposeString(cxtype);
-		if(typekind==CXCursor_EnumDecl)
-		{
-			//printf("(define-foreign-type %s int)\n" , clang_getCString(cxstring));
-		}
+		//if(typekind==CXCursor_EnumDecl)
+		//{
+		//	//printf("(define-foreign-type %s int)\n" , clang_getCString(cxstring));
+		//}
 	}
 	else if(clang_getCursorKind(cursor)==CXCursor_FunctionDecl)
 	{
@@ -121,7 +138,8 @@ definitions
 		}
 		printf("(define %s (foreign-lambda %s \"%s\"" ,
 			clang_getCString(cxstring) ,
-			truetype->kind==CXType_Pointer? "c-pointer" : clang_getCString(cxtruetype) ,
+			truetype->kind==CXType_Pointer? "c-pointer" :
+				_is_enum(type)? "int" : clang_getCString(cxtruetype) ,
 			clang_getCString(cxstring)
 		);
 		clang_disposeString(cxtruetype);
@@ -145,16 +163,18 @@ definitions
 				abort();
 			}
 			printf("\n\t%s" ,
-				truetype->kind==CXType_Pointer? "c-pointer" : clang_getCString(cxtruetype)
+				truetype->kind==CXType_Pointer? "c-pointer" :
+					_is_enum(type)? "int" : clang_getCString(cxtruetype)
 			);
 			clang_disposeString(cxtruetype);
 		}
-		printf("%c\n" , ')');
+		printf("))\n");
 		clang_disposeString(cxstring);
 		return CXChildVisit_Continue;
 	}
 	else if(clang_getCursorKind(cursor)==CXCursor_EnumDecl)
 	{
+		/* XXX enum may be anonymous, export enum type string is not always valid */
 		//printf(
 		//	"(define-foreign-type %s int)\n"
 		//	"(define >%s< (list))\n" ,

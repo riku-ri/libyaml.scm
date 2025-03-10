@@ -125,8 +125,8 @@ definitions
 		CXType endpoint = clang_getTypedefDeclUnderlyingType(
 			clang_getTypeDeclaration(type)
 		);
-		CXType * truetype = endpoint.kind==CXType_Invalid ? &type : &endpoint;
-		CXString cxtruetype = clang_getTypeSpelling(*truetype);
+		CXType truetype = endpoint.kind==CXType_Invalid ? type : endpoint;
+		CXString cxtruetype = clang_getTypeSpelling(truetype);
 		if(_is_struct(type))
 		{
 			CXString cxtype = clang_getTypeSpelling(type);
@@ -138,18 +138,18 @@ definitions
 			abort();
 		}
 		const char * typestring = clang_getCString(cxtruetype);
-		if(truetype->kind==CXType_Pointer)
+		if(truetype.kind==CXType_Pointer)
 		{
 			CXType endpoint = clang_getTypedefDeclUnderlyingType(
-				clang_getTypeDeclaration(clang_getPointeeType(*truetype))
+				clang_getTypeDeclaration(clang_getPointeeType(truetype))
 			);
-			CXType * truepoint = endpoint.kind==CXType_Invalid ? truetype : &endpoint;
+			CXType truepoint = endpoint.kind==CXType_Invalid ? clang_getPointeeType(truetype) : endpoint;
 			if(0);
-			else if(truepoint->kind==CXType_Char_U) typestring = "c-string";
-			else if(truepoint->kind==CXType_UChar) typestring = "c-string";
-			else if(truepoint->kind==CXType_Char_S) typestring = "c-string";
-			else if(truepoint->kind==CXType_SChar) typestring = "c-string";
-			else if(truepoint->kind==CXType_WChar) typestring = "c-string";
+			else if(truepoint.kind==CXType_Char_U) typestring = "c-string";
+			else if(truepoint.kind==CXType_UChar) typestring = "c-string";
+			else if(truepoint.kind==CXType_Char_S) typestring = "c-string";
+			else if(truepoint.kind==CXType_SChar) typestring = "c-string";
+			else if(truepoint.kind==CXType_WChar) typestring = "c-string";
 			else typestring = "c-pointer";
 		}
 		else if(_is_enum(type)) typestring = "int";
@@ -166,8 +166,8 @@ definitions
 			CXType endpoint = clang_getTypedefDeclUnderlyingType(
 				clang_getTypeDeclaration(type)
 			);
-			CXType * truetype = endpoint.kind==CXType_Invalid ? &type : &endpoint;
-			CXString cxtruetype = clang_getTypeSpelling(*truetype);
+			CXType truetype = endpoint.kind==CXType_Invalid ? type : endpoint;
+			CXString cxtruetype = clang_getTypeSpelling(truetype);
 			if(_is_struct(type))
 			{
 				CXString cxtype = clang_getTypeSpelling(type);
@@ -179,18 +179,18 @@ definitions
 				abort();
 			}
 			const char * typestring = clang_getCString(cxtruetype);
-			if(truetype->kind==CXType_Pointer)
+			if(truetype.kind==CXType_Pointer)
 			{
 				CXType endpoint = clang_getTypedefDeclUnderlyingType(
-					clang_getTypeDeclaration(clang_getPointeeType(*truetype))
+					clang_getTypeDeclaration(clang_getPointeeType(truetype))
 				);
-				CXType * truepoint = endpoint.kind==CXType_Invalid ? truetype : &endpoint;
+				CXType truepoint = endpoint.kind==CXType_Invalid ? clang_getPointeeType(truetype) : endpoint;
 				if(0);
-				else if(truepoint->kind==CXType_Char_U) typestring = "c-string";
-				else if(truepoint->kind==CXType_UChar) typestring = "c-string";
-				else if(truepoint->kind==CXType_Char_S) typestring = "c-string";
-				else if(truepoint->kind==CXType_SChar) typestring = "c-string";
-				else if(truepoint->kind==CXType_WChar) typestring = "c-string";
+				else if(truepoint.kind==CXType_Char_U) typestring = "c-string";
+				else if(truepoint.kind==CXType_UChar) typestring = "c-string";
+				else if(truepoint.kind==CXType_Char_S) typestring = "c-string";
+				else if(truepoint.kind==CXType_SChar) typestring = "c-string";
+				else if(truepoint.kind==CXType_WChar) typestring = "c-string";
 				else typestring = "c-pointer";
 			}
 			else if(_is_enum(type)) typestring = "int";

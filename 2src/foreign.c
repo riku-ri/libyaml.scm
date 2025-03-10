@@ -137,10 +137,21 @@ definitions
 			clang_disposeString(cxstring);
 			abort();
 		}
+		const char * typestring = clang_getCString(cxtruetype);
+		if(truetype->kind==CXType_Pointer)
+		{
+			if(0);
+			else if(clang_getPointeeType(*truetype).kind==CXType_Char_U) typestring = "c-string";
+			else if(clang_getPointeeType(*truetype).kind==CXType_UChar) typestring = "c-string";
+			else if(clang_getPointeeType(*truetype).kind==CXType_Char_S) typestring = "c-string";
+			else if(clang_getPointeeType(*truetype).kind==CXType_SChar) typestring = "c-string";
+			else if(clang_getPointeeType(*truetype).kind==CXType_WChar) typestring = "c-string";
+			else typestring = "c-pointer";
+		}
+		else if(_is_enum(type)) typestring = "int";
 		printf("(define %s (foreign-lambda %s \"%s\"" ,
 			clang_getCString(cxstring) ,
-			truetype->kind==CXType_Pointer? "c-pointer" :
-				_is_enum(type)? "int" : clang_getCString(cxtruetype) ,
+			typestring ,
 			clang_getCString(cxstring)
 		);
 		clang_disposeString(cxtruetype);
@@ -163,10 +174,19 @@ definitions
 				clang_disposeString(cxstring);
 				abort();
 			}
-			printf("\n\t%s" ,
-				truetype->kind==CXType_Pointer? "c-pointer" :
-					_is_enum(type)? "int" : clang_getCString(cxtruetype)
-			);
+			const char * typestring = clang_getCString(cxtruetype);
+			if(truetype->kind==CXType_Pointer)
+			{
+				if(0);
+				else if(clang_getPointeeType(*truetype).kind==CXType_Char_U) typestring = "c-string";
+				else if(clang_getPointeeType(*truetype).kind==CXType_UChar) typestring = "c-string";
+				else if(clang_getPointeeType(*truetype).kind==CXType_Char_S) typestring = "c-string";
+				else if(clang_getPointeeType(*truetype).kind==CXType_SChar) typestring = "c-string";
+				else if(clang_getPointeeType(*truetype).kind==CXType_WChar) typestring = "c-string";
+				else typestring = "c-pointer";
+			}
+			else if(_is_enum(type)) typestring = "int";
+			printf("\n\t%s" , typestring);
 			clang_disposeString(cxtruetype);
 		}
 		printf("))\n");

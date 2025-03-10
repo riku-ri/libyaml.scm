@@ -28,21 +28,21 @@
 ;; FOR test
 (define-syntax write/ (syntax-rules () ((write/ towrite ...) (let () (write towrite ...) (print "")))))
 
-(define (argparse <> <without-value> <with-value>)
+(define (libyaml-argparse <> <without-value> <with-value>)
 	(if (not (list? <>)) (error "argument is not a list" <>))
-	(define (:argparse <> <arg> >arg<)
+	(define (:libyaml-argparse <> <arg> >arg<)
 		(cond
 			((null? <>) (cons <arg> >arg<))
 			((keyword? (car <>))
 				(if (not (member (car <>) <without-value>))
 					(error (sprintf "without-value option not in ~S" <without-value>) (car <>)))
-				(:argparse (cdr <>) (cons (car <>) <arg>) >arg<))
+				(:libyaml-argparse (cdr <>) (cons (car <>) <arg>) >arg<))
 			((pair? (car <>))
 				(if (not (member (car (car <>)) <with-value>))
 					(error (sprintf "with-value option is not in ~S" <with-value>) (car (car <>))))
-				(:argparse (cdr <>) <arg> (cons (car <>) >arg<)))
+				(:libyaml-argparse (cdr <>) <arg> (cons (car <>) >arg<)))
 			(else (error "argument unit is not keyword or key-value pair" (car <>)))))
-	(:argparse <> '() '()))
+	(:libyaml-argparse <> '() '()))
 
 (define-syntax *->
 	(syntax-rules ()
@@ -56,7 +56,7 @@
 (define (yaml<- . ><)
 	(let*
 		(
-			(>< (argparse >< '() (list #:input #:encoding)))
+			(>< (libyaml-argparse >< '() (list #:input #:encoding)))
 			(?input (assoc #:input (cdr ><)))
 			(?encoding (assoc #:encoding (cdr ><)))
 			(string->number (lambda (?)
@@ -285,7 +285,7 @@
 (define (mapping-ordered-yaml<- . yaml><)
 	(if (null? yaml><) (error "no yaml provided"))
 	(define yaml (car yaml><))
-	(define >< (argparse (cdr yaml><) '() '(#:swap-when)))
+	(define >< (libyaml-argparse (cdr yaml><) '() '(#:swap-when)))
 	(let*
 		(
 			(?swap-when (assoc #:swap-when (cdr ><)))
@@ -322,29 +322,29 @@
 					yaml))))
 		(:mapping-ordered-yaml<- yaml)))
 
-(define (in? == mapping key)
+(define (&in-yaml-mapping? == mapping key)
 	(if (not (procedure? mapping))
 		(error "try to find a key in a non mapping object" mapping))
 	(let ((mapping (mapping)))
 		(if (not (list mapping))
 			(error "try to find a key in a non mapping object" mapping))
-		(define (:in? mapping)
+		(define (:&in-yaml-mapping? mapping)
 			(cond
 				((null? mapping) #f)
-				((not (pair? (car mapping))) (:in? (cdr mapping)))
+				((not (pair? (car mapping))) (:&in-yaml-mapping? (cdr mapping)))
 				((== (car (car mapping)) key) (car mapping))
-				(else (:in? (cdr mapping)))))
-		(:in? mapping)))
-(define (in-yaml-mapping? mapping key) (in? equal? mapping key))
-(define (in-yaml-mapping?? mapping key) (in? eqv? mapping key))
-(define (in-yaml-mapping??? mapping key) (in? eq? mapping key))
+				(else (:&in-yaml-mapping? (cdr mapping)))))
+		(:&in-yaml-mapping? mapping)))
+(define (in-yaml-mapping? mapping key) (&in-yaml-mapping? equal? mapping key))
+(define (in-yaml-mapping?? mapping key) (&in-yaml-mapping? eqv? mapping key))
+(define (in-yaml-mapping??? mapping key) (&in-yaml-mapping? eq? mapping key))
 
 (define (<-yaml . yaml><)
 	(if (null? yaml><) (error "no yaml provided"))
 	(let*
 		(
 			(yaml (car yaml><))
-			(>< (argparse
+			(>< (libyaml-argparse
 				(cdr yaml><)
 				'()
 				'(#:indent #:null #:port)))

@@ -114,14 +114,14 @@
 								(string-length input)))
 						((input-port? input)
 							(yaml_parser_set_input_file &parser (port->FILE* input)))
-						(else (error
-							(string-intersperse
-								'(
+						(else
+							(clear)
+							(error
+								(string-append
 									"#:input is not a string or input-port"
+									", "
 									"also check if the value to #:input is scheme quoted"
 								)
-								", "
-							)
 							input))
 					))
 				(yaml_parser_set_input_file &parser (port->FILE* (current-input-port)))))
@@ -130,35 +130,36 @@
 			(?encoding
 				(let ((encoding (cdr ?encoding)))
 					(yaml_parser_set_encoding &parser encoding))
-				(if (not
-					(=
-						(*-> "yaml_parser_t" &parser "encoding" enum)
-						(cdr ?encoding)))
-					(error
-						(sprintf "set encoding to ~S failed" (cdr ?encoding))))))
+				(cond
+					((not (= (*-> "yaml_parser_t" &parser "encoding" enum) (cdr ?encoding)))
+						(clear)
+						(error (sprintf "set encoding to ~S failed" (cdr ?encoding)))))))
 		(define <anchor> (list))
 		(define (:yaml<- event)
-			(if
-				(or
+			(cond
+				((or
 					(*-> "yaml_event_t" &event "data.scalar.tag" c-string)
 					(*-> "yaml_event_t" &event "data.sequence_start.tag" c-string)
 					(*-> "yaml_event_t" &event "data.mapping_start.tag" c-string)
 				)
+				(clear)
 				(error (sprintf "tag at [line:~A , colunm:~A]" ; TODO: make tage to a vector
 					(+ 1 (*-> "yaml_event_t" &event "start_mark.line" size_t))
 					(+ 1 (*-> "yaml_event_t" &event "start_mark.column" size_t)))
-					"yaml-tag is not supported"))
+					"yaml-tag is not supported")))
 			(cond
 				((= event YAML_NO_EVENT)
-					(error (sprintf "You should never go into this event ~S"
-						'YAML_NO_EVENT)))
+					(clear)
+					(error (sprintf "You should never go into this event ~S" 'YAML_NO_EVENT)))
 				((= event YAML_ALIAS_EVENT)
 					(let
 						(
 							(anchor (*-> "yaml_event_t" &event "data.alias.anchor" c-string))
 						)
-						(if (not (assoc anchor <anchor>))
-							(error "No reference or circular reference to anchor" anchor))
+						(cond
+							((not (assoc anchor <anchor>))
+								(clear)
+								(error "No reference or circular reference to anchor" anchor)))
 						(cdr (assoc anchor <anchor>))))
 				((= event YAML_SCALAR_EVENT)
 					(let*
@@ -221,10 +222,14 @@
 								((= event YAML_DOCUMENT_END_EVENT) last)
 								(else
 									; ((@ @) (:yaml<- event))
+									(clear)
 									(error
-										"YAML_DOCUMENT_END_EVENT does not appear after twice yaml_parser_parse from YAML_DOCUMENT_START_EVENT"
-										"This may be a bug in libyaml itself, it was supposed to generate a parser error here"
-									)))))))
+										(string-append
+											"YAML_DOCUMENT_END_EVENT does not appear after "
+											"twice yaml_parser_parse from YAML_DOCUMENT_START_EVENT"
+											"This may be a bug in libyaml itself,"
+											"it was supposed to generate a parser error here"
+									))))))))
 						(let* ((<< (:yaml<- (yaml-parser-parse &parser &event)))) <<)
 					))
 				((= event YAML_SEQUENCE_START_EVENT)
@@ -376,25 +381,17 @@
 						(error (sprintf "yaml_emitter_emit() failed")))))))
 		(memset &event 0 (foreign-type-size "struct yaml_event_s"))
 		(memset &emitter 0 (foreign-type-size "struct yaml_emitter_s"))
-		(event-init yaml_stream_start_event_initialize &event encoding)
-		(emit &emitter &event)
 		(let*
 			(
 				(port->FILE* (foreign-lambda c-pointer "C_port_file" scheme-object))
 				(port (port->FILE* (if ?port (cdr ?port) (current-input-port))))
 			)
 			(yaml_emitter_set_output_file &emitter (port->FILE* port)))
-		(if (not
-			(= 1 (yaml_stream_start_event_initialize
-				&event
-				(if ?encoding (cdr ?encoding) YAML_ANY_ENCODING))))
-			(error "yaml_stream_start_event_initialize failed"))
+		(event-init yaml_stream_start_event_initialize &event encoding) (emit &emitter &event)
 		(define (<-yaml-document yaml)
 			(define (:<-yaml-document yaml)
 				(cond
-					((null? yaml)
-						(yaml_scalar_event_initialize
-							&emitter #f #f "~" -1 1 0 YAML_PLAIN_SCALAR_STYLE))
+					((null? yaml) '())
 					((procedure? yaml) (let* ((yaml (yaml))) #:todo))
 					((list? yaml) #:todo)
 					(else (let((yaml
@@ -408,9 +405,9 @@
 							((boolean? yaml) (if yaml "true" "false"))
 						))) yaml))))
 			(:<-yaml-document yaml))
-		(let ((<< (map <-yaml-document yaml)))
-			(clear)
-			<<)
+		(map <-yaml-document yaml)
+		(event-init yaml_stream_end_event_initialize &event) (emit &emitter &event)
+		(clear)
 	) ; let
 )
 

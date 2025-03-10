@@ -14,15 +14,6 @@
 
 (foreign-declare "#include <yaml.h>")
 
-(define-syntax foreign-value-index (syntax-rules ()
-	((foreign-value-index index symbol value)
-		(begin
-			(define symbol value)
-			(define index
-				(cond
-					((assoc symbol index) index)
-					(else (cons (cons symbol (quote symbol)) index))))))))
-
 (define-foreign-type enum int)
 
 ;; FOR test
@@ -44,16 +35,15 @@
 			(else (error "argument unit is not keyword or key-value pair" (car <>)))))
 	(:libyaml-argparse <> '() '()))
 
-(define-syntax *->
-	(syntax-rules ()
-		((*-> type-string pointer to-access ... return-type)
-			(
-				(foreign-lambda* return-type (((c-pointer type-string) _p))
-					"C_return((_p)->" to-access ... ");")
-				pointer
-			))))
-
 (define (yaml<- . ><)
+	(define-syntax *->
+		(syntax-rules ()
+			((*-> type-string pointer to-access ... return-type)
+				(
+					(foreign-lambda* return-type (((c-pointer type-string) _p))
+						"C_return((_p)->" to-access ... ");")
+					pointer
+				))))
 	(let*
 		(
 			(>< (libyaml-argparse >< '() (list #:input #:encoding)))
@@ -350,14 +340,28 @@
 
 (define (<-yaml . yaml><)
 	(if (null? yaml><) (error "no yaml provided"))
+	(define-syntax event-init (syntax-rules ()
+		((event-emit function event ...)
+			(cond
+				((not (= 1 (function event ...)))
+					(clear)
+					(error (sprintf "~A() failed" (symbol->string (quote function)))))))))
+	(define-syntax emit (syntax-rules ()
+		((event-emit emitter event)
+			(cond
+				((not (= 1 (yaml_emitter_emit emitter event)))
+					(clear)
+					(error (sprintf "yaml_emitter_emit() failed")))))))
 	(let*
 		(
 			(yaml (car yaml><))
 			(>< (libyaml-argparse
 				(cdr yaml><)
 				'()
-				'(#:indent #:port)))
+				'(#:indent #:port #:encoding)))
 			(?port (assoc #:port (cdr ><)))
+			(?encoding (assoc #:encoding (cdr ><)))
+			(encoding (if ?encoding (cdr ?encoding) YAML_ANY_ENCODING))
 			(memset (foreign-lambda c-pointer "memset" c-pointer int size_t))
 			(&emitter (allocate (foreign-type-size "struct yaml_emitter_s")))
 			(&event (allocate (foreign-type-size "struct yaml_event_s")))
@@ -372,25 +376,25 @@
 		)
 		(memset &event 0 (foreign-type-size "struct yaml_event_s"))
 		(memset &emitter 0 (foreign-type-size "struct yaml_emitter_s"))
-		(let ((<< (yaml_emitter_initialize &emitter)))
-			(cond
-				((not (= << 1))
-					(clear)
-					(error (sprintf "yaml_emitter_initialize() failed and return [~A]" <<)))))
+		(event-init yaml_stream_start_event_initialize &event encoding)
+		(emit &emitter &event)
 		(let*
 			(
 				(port->FILE* (foreign-lambda c-pointer "C_port_file" scheme-object))
 				(port (port->FILE* (if ?port (cdr ?port) (current-input-port))))
 			)
 			(yaml_emitter_set_output_file &emitter (port->FILE* port)))
+		(if (not
+			(= 1 (yaml_stream_start_event_initialize
+				&event
+				(if ?encoding (cdr ?encoding) YAML_ANY_ENCODING))))
+			(error "yaml_stream_start_event_initialize failed"))
 		(define (<-yaml-document yaml)
 			(define (:<-yaml-document yaml)
 				(cond
 					((null? yaml)
 						(yaml_scalar_event_initialize
-							&emitter #f #f -1 1 0 YAML_PLAIN_SCALAR_STYLE
-						)
-					)
+							&emitter #f #f "~" -1 1 0 YAML_PLAIN_SCALAR_STYLE))
 					((procedure? yaml) (let* ((yaml (yaml))) #:todo))
 					((list? yaml) #:todo)
 					(else (let((yaml

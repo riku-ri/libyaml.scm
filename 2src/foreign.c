@@ -95,8 +95,10 @@ definitions
 	}
 	const char * fname_p = clang_getCString(fname);
 	while(*++fname_p);
-	for(int i=0 ; i<(sizeof("yaml.h")-1) ; i++) fname_p--;
-	if(strncmp(fname_p , "yaml.h" , sizeof("yaml.h"))!=0)
+	for(int i=0 ; i<sizeof("yaml.h") ; i++) fname_p--;
+	if(strncmp(fname_p , "/yaml.h" , sizeof("yaml.h"))!=0)
+	/* the prefix '/' is required to distinguish from strings like libyaml.h */
+	/* use './yaml.h' if without path */
 	{
 		clang_disposeString(fname);
 		clang_disposeString(cxstring);

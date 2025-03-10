@@ -340,18 +340,6 @@
 
 (define (<-yaml . yaml><)
 	(if (null? yaml><) (error "no yaml provided"))
-	(define-syntax event-init (syntax-rules ()
-		((event-emit function event ...)
-			(cond
-				((not (= 1 (function event ...)))
-					(clear)
-					(error (sprintf "~A() failed" (symbol->string (quote function)))))))))
-	(define-syntax emit (syntax-rules ()
-		((event-emit emitter event)
-			(cond
-				((not (= 1 (yaml_emitter_emit emitter event)))
-					(clear)
-					(error (sprintf "yaml_emitter_emit() failed")))))))
 	(let*
 		(
 			(yaml (car yaml><))
@@ -374,6 +362,18 @@
 			;(?null (assoc #:null (cdr ><)))
 			;(null (if ?null (cdr ?null) "~"))
 		)
+		(define-syntax event-init (syntax-rules ()
+			((event-emit function event ...)
+				(cond
+					((not (= 1 (function event ...)))
+						(clear)
+						(error (sprintf "~A() failed" (symbol->string (quote function)))))))))
+		(define-syntax emit (syntax-rules ()
+			((event-emit emitter event)
+				(cond
+					((not (= 1 (yaml_emitter_emit emitter event)))
+						(clear)
+						(error (sprintf "yaml_emitter_emit() failed")))))))
 		(memset &event 0 (foreign-type-size "struct yaml_event_s"))
 		(memset &emitter 0 (foreign-type-size "struct yaml_emitter_s"))
 		(event-init yaml_stream_start_event_initialize &event encoding)

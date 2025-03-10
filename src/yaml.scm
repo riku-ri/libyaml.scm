@@ -64,8 +64,8 @@
 					(string->number ?)
 					(error "(string->number) convert error" ?))))
 			(memset (foreign-lambda c-pointer "memset" c-pointer int size_t))
-			(&parser (allocate (foreign-type-size "yaml_parser_t")))
-			(&event (allocate (foreign-type-size "yaml_event_t")))
+			(&parser (allocate (foreign-type-size "struct yaml_parser_s")))
+			(&event (allocate (foreign-type-size "struct yaml_event_s")))
 			(clear (lambda ()
 				(if ?input
 					(let ((input (cdr ?input)))
@@ -99,14 +99,20 @@
 					)))
 		)
 
-		(memset &parser 0 (foreign-type-size "yaml_parser_t"))
-		(memset &event 0 (foreign-type-size "yaml_event_t"))
+		(memset &parser 0 (foreign-type-size "struct yaml_parser_s"))
+		(memset &event 0 (foreign-type-size "struct yaml_event_s"))
 
-		(let* ((<< (yaml_parser_initialize &parser))) (if (not (= 1 <<))
-		; According to comment in <yaml.h>, yaml_parser_initialize() return 1 when succeeded
-			(error (sprintf "[~A] with error [~A]"
-				<<
-				(*-> "yaml_parser_t" &parser "error" enum)))))
+		(let* ((<< (yaml_parser_initialize &parser)) (err (*-> "yaml_parser_t" &parser "error" enum)))
+			(cond
+				((not (= 1 <<))
+					(clear)
+					(error (sprintf
+						(string-append
+							"yaml_parser_initialize() failed and return [~A] but not [1]."
+							" "
+							"Error code in struct yaml_parser_s is [~A]")
+						<<
+						err)))))
 		(let ((port->FILE* (foreign-lambda c-pointer "C_port_file" scheme-object)))
 			(if ?input
 				(let ((input (cdr ?input)))
@@ -350,8 +356,8 @@
 				'(#:indent #:null #:port)))
 			(?port (assoc #:port (cdr ><)))
 			(memset (foreign-lambda c-pointer "memset" c-pointer int size_t))
-			(&emitter (allocate (foreign-type-size "yaml_emitter_t")))
-			(&event (allocate (foreign-type-size "yaml_event_t")))
+			(&emitter (allocate (foreign-type-size "struct yaml_emitter_s")))
+			(&event (allocate (foreign-type-size "struct yaml_event_s")))
 			(clear (lambda ()
 				(if ?port
 					(let ((input (cdr ?port)))
@@ -363,6 +369,13 @@
 			(?null (assoc #:null (cdr ><)))
 			(null (if ?null (cdr ?null) "~"))
 		)
+		(memset &event 0 (foreign-type-size "struct yaml_event_s"))
+		(memset &emitter 0 (foreign-type-size "struct yaml_emitter_s"))
+		(let ((<< (yaml_emitter_initialize &emitter)))
+			(cond
+				((not (= << 1))
+					(clear)
+					(error (sprintf "yaml_emitter_initialize() failed and return [~A]" <<)))))
 		(define (yaml-document-string<- yaml)
 			(define (:yaml-document-string<- yaml)
 				(cond
@@ -380,7 +393,9 @@
 							((boolean? yaml) (if yaml "true" "false"))
 						))) yaml))))
 			(:yaml-document-string<- yaml))
-		(map yaml-document-string<- yaml)
+		(let ((<< (map yaml-document-string<- yaml)))
+			(clear)
+			<<)
 	) ; let
 )
 

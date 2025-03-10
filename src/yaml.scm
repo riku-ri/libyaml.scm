@@ -67,13 +67,13 @@
 			(&parser (allocate (foreign-type-size "struct yaml_parser_s")))
 			(&event (allocate (foreign-type-size "struct yaml_event_s")))
 			(clear (lambda ()
-				(if ?input
-					(let ((input (cdr ?input)))
-						(if (input-port? input) (close-input-port input))))
 				(yaml_event_delete &event)
 				(yaml_parser_delete &parser)
 				(free &parser)
-				(free &event)))
+				(free &event)
+				(if ?input
+					(let ((input (cdr ?input)))
+						(if (input-port? input) (close-input-port input))))))
 			(c-string-or-empty (lambda (tocheck) (let* ((str tocheck)) (if str str ""))))
 			(yaml-parser-parse
 				(lambda (parser event)
@@ -118,7 +118,10 @@
 				(let ((input (cdr ?input)))
 					(cond
 						((string? input)
-							(yaml_parser_set_input_string &parser input (string-length input)))
+							(yaml_parser_set_input_string
+								&parser
+								input
+								(string-length input)))
 						((input-port? input)
 							(yaml_parser_set_input_file &parser (port->FILE* input)))
 						(else (error
@@ -353,21 +356,19 @@
 			(>< (libyaml-argparse
 				(cdr yaml><)
 				'()
-				'(#:indent #:null #:port)))
+				'(#:indent #:port)))
 			(?port (assoc #:port (cdr ><)))
 			(memset (foreign-lambda c-pointer "memset" c-pointer int size_t))
 			(&emitter (allocate (foreign-type-size "struct yaml_emitter_s")))
 			(&event (allocate (foreign-type-size "struct yaml_event_s")))
 			(clear (lambda ()
-				(if ?port
-					(let ((input (cdr ?port)))
-						(if (input-port? input) (close-input-port input))))
 				(yaml_emitter_delete &emitter)
 				(yaml_event_delete &event)
 				(free &emitter)
-				(free &event)))
-			(?null (assoc #:null (cdr ><)))
-			(null (if ?null (cdr ?null) "~"))
+				(free &event)
+				(if ?port (close-input-port (cdr ?port)))))
+			;(?null (assoc #:null (cdr ><)))
+			;(null (if ?null (cdr ?null) "~"))
 		)
 		(memset &event 0 (foreign-type-size "struct yaml_event_s"))
 		(memset &emitter 0 (foreign-type-size "struct yaml_emitter_s"))
@@ -376,10 +377,20 @@
 				((not (= << 1))
 					(clear)
 					(error (sprintf "yaml_emitter_initialize() failed and return [~A]" <<)))))
-		(define (yaml-document-string<- yaml)
-			(define (:yaml-document-string<- yaml)
+		(let*
+			(
+				(port->FILE* (foreign-lambda c-pointer "C_port_file" scheme-object))
+				(port (port->FILE* (if ?port (cdr ?port) (current-input-port))))
+			)
+			(yaml_emitter_set_output_file &emitter (port->FILE* port)))
+		(define (<-yaml-document yaml)
+			(define (:<-yaml-document yaml)
 				(cond
-					((null? yaml) null)
+					((null? yaml)
+						(yaml_scalar_event_initialize
+							&emitter #f #f -1 1 0 YAML_PLAIN_SCALAR_STYLE
+						)
+					)
 					((procedure? yaml) (let* ((yaml (yaml))) #:todo))
 					((list? yaml) #:todo)
 					(else (let((yaml
@@ -392,8 +403,8 @@
 									(else (number->string yaml))))
 							((boolean? yaml) (if yaml "true" "false"))
 						))) yaml))))
-			(:yaml-document-string<- yaml))
-		(let ((<< (map yaml-document-string<- yaml)))
+			(:<-yaml-document yaml))
+		(let ((<< (map <-yaml-document yaml)))
 			(clear)
 			<<)
 	) ; let
@@ -408,10 +419,5 @@
 	((write/ towrite ...)
 		(let () (write towrite ...) (print "")))))
 
-(define yaml
-(yaml<-)
-)
-(print
-(<-yaml yaml
-)
-)
+(define yaml (yaml<- '(#:input . "[]"))) ;FIXME: c-string vs c-pointe
+(<-yaml yaml)

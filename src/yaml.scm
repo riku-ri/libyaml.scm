@@ -17,22 +17,27 @@
 (define-foreign-type enum int)
 
 ;; FOR test
-(define-syntax write/ (syntax-rules () ((write/ towrite ...) (let () (write towrite ...) (print "")))))
+;(define-syntax write/ (syntax-rules () ((write/ towrite ...) (let () (write towrite ...) (print "")))))
 
-(define (libyaml-argparse <> <without-value> <with-value>)
+(define (libyaml-argparse <> <without-value> <with-value> before-error)
 	(if (not (list? <>)) (error "argument is not a list" <>))
 	(define (:libyaml-argparse <> <arg> >arg<)
-		(cond
-			((null? <>) (cons <arg> >arg<))
-			((keyword? (car <>))
-				(if (not (member (car <>) <without-value>))
-					(error (sprintf "without-value option not in ~S" <without-value>) (car <>)))
-				(:libyaml-argparse (cdr <>) (cons (car <>) <arg>) >arg<))
-			((pair? (car <>))
-				(if (not (member (car (car <>)) <with-value>))
-					(error (sprintf "with-value option is not in ~S" <with-value>) (car (car <>))))
-				(:libyaml-argparse (cdr <>) <arg> (cons (car <>) >arg<)))
-			(else (error "argument unit is not keyword or key-value pair" (car <>)))))
+		(let
+			(
+				(error (lambda (^ . ...)
+					(if (procedure? before-error) (before-error) (apply error (cons ^ ...)))))
+			)
+			(cond
+				((null? <>) (cons <arg> >arg<))
+				((keyword? (car <>))
+					(if (not (member (car <>) <without-value>))
+						(error (sprintf "without-value option not in ~S" <without-value>) (car <>)))
+					(:libyaml-argparse (cdr <>) (cons (car <>) <arg>) >arg<))
+				((pair? (car <>))
+					(if (not (member (car (car <>)) <with-value>))
+						(error (sprintf "with-value option is not in ~S" <with-value>) (car (car <>))))
+					(:libyaml-argparse (cdr <>) <arg> (cons (car <>) >arg<)))
+				(else (error "argument unit is not keyword or key-value pair" (car <>))))))
 	(:libyaml-argparse <> '() '()))
 
 (define (yaml<- . ><)
@@ -46,7 +51,7 @@
 				))))
 	(let*
 		(
-			(>< (libyaml-argparse >< '() (list #:input #:encoding)))
+			(>< (libyaml-argparse >< '() (list #:input #:encoding) #:no-clear))
 			(?input (assoc #:input (cdr ><)))
 			(?encoding (assoc #:encoding (cdr ><)))
 			(string->number (lambda (?)
@@ -280,7 +285,7 @@
 (define (mapping-ordered-yaml<- . yaml><)
 	(if (null? yaml><) (error "no yaml provided"))
 	(define yaml (car yaml><))
-	(define >< (libyaml-argparse (cdr yaml><) '() '(#:swap-when)))
+	(define >< (libyaml-argparse (cdr yaml><) '() '(#:swap-when) #:no-clear))
 	(let*
 		(
 			(?swap-when (assoc #:swap-when (cdr ><)))
@@ -342,7 +347,9 @@
 			(>< (libyaml-argparse
 				(cdr yaml><)
 				'()
-				'(#:indent #:port #:encoding)))
+				'(#:indent #:port #:encoding)
+				#:no-clear
+				))
 			(?port (assoc #:port (cdr ><)))
 			(port (if ?port (cdr ?port) (current-output-port)))
 			(?encoding (assoc #:encoding (cdr ><)))
@@ -460,4 +467,5 @@
 ;		(let () (write towrite ...) (print "")))))
 ;
 ;(define yaml (yaml<-)) ;FIXME: c-string vs c-pointe
+;(print (mapping-ordered-yaml<- yaml))
 ;(<-yaml yaml)

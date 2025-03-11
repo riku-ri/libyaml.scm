@@ -382,39 +382,40 @@
 						(error (sprintf "~S after ~S failed and return ~S"
 							(quote yaml_emitter_emit)
 							(quote function) <<)))))))))
+		;(yaml_emitter_initialize &emitter)
+		;(yaml_emitter_set_output_file &emitter port)
+		;(<-* &emitter yaml_stream_start_event_initialize &event encoding)
+		;(<-* &emitter yaml_document_start_event_initialize &event #f #f #f 1)
+		;(<-* &emitter yaml_scalar_event_initialize &event #f #f "there" -1 1 1 YAML_LITERAL_SCALAR_STYLE)
+		;(<-* &emitter yaml_document_end_event_initialize &event 1)
+		;(<-* &emitter yaml_stream_end_event_initialize &event)
+
 		(yaml_emitter_initialize &emitter)
 		(yaml_emitter_set_output_file &emitter port)
 		(<-* &emitter yaml_stream_start_event_initialize &event encoding)
-		(<-* &emitter yaml_document_start_event_initialize &event #f #f #f 1)
-		(<-* &emitter yaml_scalar_event_initialize &event #f #f "there" -1 1 1 YAML_LITERAL_SCALAR_STYLE)
-		(<-* &emitter yaml_document_end_event_initialize &event 1)
+		(define (<-yaml-document yaml)
+			(<-* &emitter yaml_document_start_event_initialize &event #f #f #f 0)
+			(define (:<-yaml-document yaml)
+				(cond
+					((null? yaml)
+						(<-* &emitter yaml_scalar_event_initialize &event #f #f "~" -1 1 1 YAML_PLAIN_SCALAR_STYLE))
+					((procedure? yaml) (let* ((yaml (yaml))) #:todo))
+					((list? yaml) #:todo)
+					(else (let ((yaml
+						(cond
+							((string? yaml) yaml)
+							((number? yaml)
+								(cond
+									((nan? yaml) ".nan")
+									((infinite? yaml) (if (> yaml 0) "+.inf" "-.inf"))
+									(else (number->string yaml))))
+							((boolean? yaml) (if yaml "true" "false"))
+						))) yaml))))
+			(:<-yaml-document yaml)
+			(<-* &emitter yaml_document_end_event_initialize &event 0)
+		)
+		(map <-yaml-document yaml) ; XXX if map is parallel, emitter may be undefined
 		(<-* &emitter yaml_stream_end_event_initialize &event)
-
-		;(yaml_emitter_initialize &emitter)
-		;(yaml_emitter_set_output_file &emitter (current-output-port))
-		;(yaml_stream_start_event_initialize &event YAML_ANY_ENCODING) (yaml_emitter_emit &emitter &event)
-		;(define (<-yaml-document yaml)
-		;	(yaml_document_start_event_initialize &event #f #f #f 0) (yaml_emitter_emit &emitter &event)
-		;	(define (:<-yaml-document yaml)
-		;		(cond
-		;			((null? yaml) (yaml_scalar_event_initialize &event #f #f "~" -1 0 0 YAML_LITERAL_SCALAR_STYLE)(yaml_emitter_emit &emitter &event))
-		;			((procedure? yaml) (let* ((yaml (yaml))) #:todo))
-		;			((list? yaml) #:todo)
-		;			(else (let ((yaml
-		;				(cond
-		;					((string? yaml) yaml)
-		;					((number? yaml)
-		;						(cond
-		;							((nan? yaml) ".nan")
-		;							((infinite? yaml) (if (> yaml 0) "+.inf" "-.inf"))
-		;							(else (number->string yaml))))
-		;					((boolean? yaml) (if yaml "true" "false"))
-		;				))) yaml))))
-		;	(:<-yaml-document yaml)
-		;	(yaml_document_end_event_initialize &event 1) (yaml_emitter_emit &emitter &event)
-		;)
-		;(map <-yaml-document yaml)
-		;(yaml_stream_end_event_initialize &event) (yaml_emitter_emit &emitter &event)
 		(clear)
 	) ; let
 )

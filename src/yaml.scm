@@ -97,7 +97,11 @@
 		(memset &parser 0 (foreign-type-size "struct yaml_parser_s"))
 		(memset &event 0 (foreign-type-size "struct yaml_event_s"))
 
-		(let* ((<< (yaml_parser_initialize &parser)) (err (*-> "yaml_parser_t" &parser "error" enum)))
+		(let*
+			(
+				(<< (yaml_parser_initialize &parser))
+				(err (*-> "yaml_parser_t" &parser "error" enum))
+			)
 			(cond
 				((not (= 1 <<))
 					(error (sprintf
@@ -169,7 +173,8 @@
 						(let
 							(
 								(<< (if (*-> "yaml_event_t" &event "data.scalar.plain_implicit" bool)
-								; XXX: implicit yaml-tag value also not set plain_implicit. But yaml-tag will generate an error
+								; XXX: implicit yaml-tag value also not set plain_implicit.
+								; But yaml-tag will generate an error
 									(cond
 										; Regular expression is from https://yaml.org/spec/1.2.2/
 										((or (= (string-length <<) 0) (irregex-match? "null|Null|NULL|~" <<)) '())
@@ -190,7 +195,8 @@
 											(let ((sign (not (char=? #\. (string-ref << 0)))))
 												(string->number (string-append
 													(if sign (substring << 0 1) "+")
-													(list->string (map char-downcase (string->list (substring << (if sign 2 1)))))
+													(list->string
+														(map char-downcase (string->list (substring << (if sign 2 1)))))
 													".0"))))
 										((irregex-match? "\\.nan|\\.NaN|\\.NAN" <<)
 											(string->number (string-append
@@ -201,7 +207,8 @@
 									)
 									<<))
 							)
-							(if anchor (if (not (assoc anchor <anchor>)) (set! <anchor> (cons (cons anchor <<) <anchor>))))
+							(if anchor (if (not (assoc anchor <anchor>))
+								(set! <anchor> (cons (cons anchor <<) <anchor>))))
 							<<)))
 				((= event YAML_STREAM_START_EVENT)
 					(
@@ -238,8 +245,10 @@
 									(anchor (*-> "yaml_event_t" &event "data.sequence_start.anchor" c-string))
 									(event (yaml-parser-parse &parser &event))
 								)
-								; If not get event but use the value in member of &event, all recursion will end by the most internal YAML_SEQUENCE_END_EVENT
-								; YAML_STREAM_START_EVENT has no this problem because stream would never be nested
+								; If not get event but use the value in member of &event
+								; all recursion will end by the most internal YAML_SEQUENCE_END_EVENT
+								; this error will not occure in YAML_STREAM_START_EVENT
+								; because stream would never be nested
 								(cond
 									((= event YAML_SEQUENCE_END_EVENT) '())
 									(else
@@ -370,14 +379,6 @@
 		(memset &event 0 (foreign-type-size "struct yaml_event_s"))
 		(memset &emitter 0 (foreign-type-size "struct yaml_emitter_s"))
 
-		;(yaml_emitter_initialize &emitter)
-		;(yaml_emitter_set_output_file &emitter port)
-		;(yaml_stream_start_event_initialize &event encoding)(yaml_emitter_emit &emitter &event)
-		;(yaml_document_start_event_initialize &event #f #f #f 1)(yaml_emitter_emit &emitter &event)
-		;(yaml_scalar_event_initialize &event #f #f "here" -1 1 1 YAML_LITERAL_SCALAR_STYLE)(yaml_emitter_emit &emitter &event)
-		;(yaml_document_end_event_initialize &event 1)(yaml_emitter_emit &emitter &event)
-		;(yaml_stream_end_event_initialize &event)(yaml_emitter_emit &emitter &event)
-
 		(define-syntax <-* (syntax-rules ()
 			((<-* emitter function event ...) (let ()
 				(let ((<< (function event ...)))
@@ -389,13 +390,6 @@
 						(error (sprintf "~S after ~S failed and return ~S"
 							(quote yaml_emitter_emit)
 							(quote function) <<)))))))))
-		;(yaml_emitter_initialize &emitter)
-		;(yaml_emitter_set_output_file &emitter port)
-		;(<-* &emitter yaml_stream_start_event_initialize &event encoding)
-		;(<-* &emitter yaml_document_start_event_initialize &event #f #f #f 1)
-		;(<-* &emitter yaml_scalar_event_initialize &event #f #f "there" -1 1 1 YAML_LITERAL_SCALAR_STYLE)
-		;(<-* &emitter yaml_document_end_event_initialize &event 1)
-		;(<-* &emitter yaml_stream_end_event_initialize &event)
 
 		(yaml_emitter_initialize &emitter)
 		(yaml_emitter_set_output_file &emitter port)

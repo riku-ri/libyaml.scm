@@ -253,7 +253,8 @@
 									((= event YAML_SEQUENCE_END_EVENT) '())
 									(else
 										(let ((<< (cons (:yaml<- event) ((@ @)))))
-											(if anchor (if (not (assoc anchor <anchor>)) (set! <anchor> (cons (cons anchor <<) <anchor>))))
+											(if anchor (if (not (assoc anchor <anchor>))
+												(set! <anchor> (cons (cons anchor <<) <anchor>))))
 											<<)
 									))))))
 					))

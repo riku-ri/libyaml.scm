@@ -395,23 +395,53 @@
 		(<-* &emitter yaml_stream_start_event_initialize &event encoding)
 		(define (<-yaml-document yaml)
 			(<-* &emitter yaml_document_start_event_initialize &event #f #f #f 0)
-			(define (:<-yaml-document yaml)
+			(define (:<-yaml-in-document yaml)
 				(cond
 					((null? yaml)
-						(<-* &emitter yaml_scalar_event_initialize &event #f #f "~" -1 1 1 YAML_PLAIN_SCALAR_STYLE))
-					((procedure? yaml) (let* ((yaml (yaml))) #:todo))
-					((list? yaml) #:todo)
-					(else (let ((yaml
+						(<-* &emitter yaml_scalar_event_initialize &event #f #f "~" -1 1 1
+							YAML_PLAIN_SCALAR_STYLE))
+					((procedure? yaml)
+						(<-* &emitter yaml_mapping_start_event_initialize &event
+							#f #f 0 YAML_BLOCK_MAPPING_STYLE)
+						(let ((yaml (yaml)))
+							(map
+								(lambda (?) (:<-yaml-in-document (car ?)) (:<-yaml-in-document (cdr ?)))
+								yaml))
+						(<-* &emitter yaml_mapping_end_event_initialize &event)
+					)
+					((list? yaml)
+						(<-* &emitter yaml_sequence_start_event_initialize &event
+							#f #f 0 YAML_BLOCK_SEQUENCE_STYLE)
+						(map :<-yaml-in-document yaml)
+						(<-* &emitter yaml_sequence_end_event_initialize &event)
+					)
+					(else
+					; Unknown error: if plain_implicit and quoted_implicit are both 0
+					; yaml_scalar_event_initialize will get an double free error
 						(cond
-							((string? yaml) yaml)
+							((string? yaml)
+								(let
+									(
+										(style (cond
+											((< 1 (length (string-split yaml "\n" #t))) YAML_LITERAL_SCALAR_STYLE)
+											(else YAML_PLAIN_SCALAR_STYLE)))
+									)
+									(<-* &emitter yaml_scalar_event_initialize &event #f #f yaml -1 0 1
+										style)))
 							((number? yaml)
 								(cond
-									((nan? yaml) ".nan")
-									((infinite? yaml) (if (> yaml 0) "+.inf" "-.inf"))
+									((nan? yaml) (let ((scalar ".nan"))
+										(<-* &emitter yaml_scalar_event_initialize &event #f #f scalar -1 1 1
+											YAML_PLAIN_SCALAR_STYLE)))
+									((infinite? yaml) (let ((scalar (if (> yaml 0) "+.inf" "-.inf")))
+										(<-* &emitter yaml_scalar_event_initialize &event #f #f scalar -1 1 1
+											YAML_PLAIN_SCALAR_STYLE)))
 									(else (number->string yaml))))
-							((boolean? yaml) (if yaml "true" "false"))
-						))) yaml))))
-			(:<-yaml-document yaml)
+							((boolean? yaml) (let ((scalar (if yaml "true" "false")))
+								(<-* &emitter yaml_scalar_event_initialize &event #f #f scalar -1 1 1
+									YAML_PLAIN_SCALAR_STYLE)))
+						))))
+			(:<-yaml-in-document yaml)
 			(<-* &emitter yaml_document_end_event_initialize &event 0)
 		)
 		(map <-yaml-document yaml) ; XXX if map is parallel, emitter may be undefined
@@ -422,12 +452,12 @@
 
 )
 
-(import libyaml)
-(import (chicken pretty-print))
-(import (chicken foreign))
-(define-syntax write/ (syntax-rules ()
-	((write/ towrite ...)
-		(let () (write towrite ...) (print "")))))
-
-(define yaml (yaml<- '(#:input . "[]"))) ;FIXME: c-string vs c-pointe
-(<-yaml yaml)
+;(import libyaml)
+;(import (chicken pretty-print))
+;(import (chicken foreign))
+;(define-syntax write/ (syntax-rules ()
+;	((write/ towrite ...)
+;		(let () (write towrite ...) (print "")))))
+;
+;(define yaml (yaml<-)) ;FIXME: c-string vs c-pointe
+;(<-yaml yaml)

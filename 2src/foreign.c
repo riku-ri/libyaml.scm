@@ -40,7 +40,7 @@ main(int argc , char * argv[])
 	return 0;
 }
 
-static int _is_enum(CXType cxtype)
+static int _is(enum CXCursorKind cxcursorkind , CXType cxtype)
 {
 	enum CXCursorKind typekind = clang_getCursorKind(clang_getTypeDeclaration(cxtype));
 	CXType truetype = clang_getTypedefDeclUnderlyingType(
@@ -49,23 +49,7 @@ static int _is_enum(CXType cxtype)
 	enum CXCursorKind truetypekind = clang_getCursorKind(
 		clang_getTypeDeclaration(truetype)
 	);
-	if(typekind==CXCursor_EnumDecl || truetypekind==CXCursor_EnumDecl)
-	{
-		return (!0);
-	}
-	return 0;
-}
-
-static int _is_struct(CXType cxtype)
-{
-	enum CXCursorKind typekind = clang_getCursorKind(clang_getTypeDeclaration(cxtype));
-	CXType truetype = clang_getTypedefDeclUnderlyingType(
-		clang_getTypeDeclaration(cxtype)
-	);
-	enum CXCursorKind truetypekind = clang_getCursorKind(
-		clang_getTypeDeclaration(truetype)
-	);
-	if(typekind==CXCursor_StructDecl || truetypekind==CXCursor_StructDecl)
+	if(typekind==cxcursorkind || truetypekind==cxcursorkind)
 	{
 		return (!0);
 	}
@@ -127,10 +111,10 @@ definitions
 		);
 		CXType truetype = endpoint.kind==CXType_Invalid ? type : endpoint;
 		CXString cxtruetype = clang_getTypeSpelling(truetype);
-		if(_is_struct(type))
+		if(_is(CXCursor_StructDecl , type) || _is(CXCursor_UnionDecl , type))
 		{
 			CXString cxtype = clang_getTypeSpelling(type);
-			fprintf(stderr , "[ERROR] struct type [%s] is not supported\n" ,
+			fprintf(stderr , "[ERROR] struct/union type [%s] is not supported\n" ,
 				clang_getCString(cxtype)
 			);
 			clang_disposeString(cxtype);
@@ -152,7 +136,7 @@ definitions
 			else if(truepoint.kind==CXType_WChar) typestring = "c-string";
 			else typestring = "c-pointer";
 		}
-		else if(_is_enum(type)) typestring = "int";
+		else if(_is(CXCursor_EnumDecl , type)) typestring = "int";
 		printf("(define %s (foreign-lambda %s \"%s\"" ,
 			clang_getCString(cxstring) ,
 			typestring ,
@@ -168,10 +152,10 @@ definitions
 			);
 			CXType truetype = endpoint.kind==CXType_Invalid ? type : endpoint;
 			CXString cxtruetype = clang_getTypeSpelling(truetype);
-			if(_is_struct(type))
+			if(_is(CXCursor_StructDecl , type) || _is(CXCursor_UnionDecl , type))
 			{
 				CXString cxtype = clang_getTypeSpelling(type);
-				fprintf(stderr , "[ERROR] struct type [%s] is not supported\n" ,
+				fprintf(stderr , "[ERROR] struct/union type [%s] is not supported\n" ,
 					clang_getCString(cxtype)
 				);
 				clang_disposeString(cxtype);
@@ -193,7 +177,7 @@ definitions
 				else if(truepoint.kind==CXType_WChar) typestring = "c-string";
 				else typestring = "c-pointer";
 			}
-			else if(_is_enum(type)) typestring = "int";
+			else if(_is(CXCursor_EnumDecl , type)) typestring = "int";
 			printf("\n\t%s" , typestring);
 			clang_disposeString(cxtruetype);
 		}

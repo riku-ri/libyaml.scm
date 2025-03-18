@@ -1,0 +1,23 @@
+on:
+  push:
+  - main
+  #pull_request:
+permissions:
+  contents: write
+env:
+  env: env
+  #GITHUB_CONTEX: ${{ toJson(github) }}
+jobs:
+  lincese:
+    runs-on: ubuntu-latest #public
+    steps:
+    - uses: actions/checkout@main
+    - run: m4 -P -Dm4_year="$(date +%Y)" -Dm4_email="${{ github.event.repository.owner.email }}" -Dm4_name="${{ github.event.repository.owner.login }}" <.LICENSE.m4 >LICENSE
+    - name: license
+      if: ${{ github.ref=='refs/heads/main' }}
+      run: |
+        git config user.name  ${{ github.event.repository.owner.name  }}
+        git config user.email ${{ github.event.repository.owner.email }}
+        git add LICENSE
+        git diff-index --quiet HEAD || git commit -m '[action][lincese]'
+        git push

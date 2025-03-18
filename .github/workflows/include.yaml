@@ -16,7 +16,7 @@ jobs:
     - run: mkdir -p include/.
     - run: sudo apt update && sudo apt install -y clang libclang-dev
     - run: ls -l /usr/lib/llvm-*/include
-    - run: find /usr/lib/llvm-* -type directory -name clang-c | head -n1 | xargs -t -I__ clang -o foreign -I$(dirname __) -lclang 2src/foreign.c && ./foreign src/libyaml/include/yaml.h 1>include/foreign.scm
+    - run: find /usr/lib/llvm-* -type d -name clang-c | head -n1 | xargs -t -I__ clang -o foreign -I$(dirname __) -lclang 2src/foreign.c && ./foreign src/libyaml/include/yaml.h 1>include/foreign.scm
     - name: foreign.scm
       run: |
         git config user.name  ${{ github.event.repository.owner.name  }}

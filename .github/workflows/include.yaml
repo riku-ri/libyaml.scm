@@ -6,13 +6,13 @@ permissions:
 #env:
 #  GITHUB_CONTEX: ${{ toJson(github) }}
 jobs:
-  foreign:
+  include:
     runs-on: ubuntu-latest #public
     steps:
     - uses: actions/checkout@main
       with:
         submodules: false
-    - run: sudo apt update && sudo apt install -y clang libclang-dev
+    - run: sudo apt update && sudo apt install -y clang libclang-dev autoconf
     #- run: find /usr/lib/llvm-* -type d -name clang-c
     #- run: find /usr/lib/llvm-* -name libclang.so
     - name: foreign.scm
@@ -21,30 +21,16 @@ jobs:
         find /usr/lib/llvm-* -name libclang.so -exec ln -sf {} ./lib/. \;
         clang -o foreign -I./usr/. -L./lib/. -lclang 2src/foreign.c
         ./foreign src/libyaml/include/yaml.h 1>include/foreign.scm
-    - name: diff and push
-      run: |
-        git config user.name  ${{ github.event.repository.owner.name  }}
-        git config user.email ${{ github.event.repository.owner.email }}
-        git add include/foreign.scm
-        git diff-index --quiet HEAD || git commit -m '[auto][from github action][include/foreign.scm]'
-        git push
-  HAVE_CONFIG_H:
-    runs-on: ubuntu-latest #public
-    steps:
-    - uses: actions/checkout@main
-      with:
-        submodules: recursive
-    - run: sudo apt update && sudo apt install -y autoconf
-    #- run: find /usr/lib/llvm-* -type d -name clang-c
-    #- run: find /usr/lib/llvm-* -name libclang.so
     - name: config.h
       run: ./bootstrap && ./configure
       working-directory: ./src/libyaml
     - run: mv ./src/libyaml/include/config.h ./include/.
     - name: diff and push
+    - name: diff and push
       run: |
         git config user.name  ${{ github.event.repository.owner.name  }}
         git config user.email ${{ github.event.repository.owner.email }}
+        git add include/foreign.scm
         git add include/config.h
-        git diff-index --quiet HEAD || git commit -m '[auto][from github action][include/config.h]'
+        git diff-index --quiet HEAD || git commit -m '[auto][from github action][include/foreign.scm]'
         git push

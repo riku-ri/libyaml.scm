@@ -12,7 +12,6 @@ jobs:
     - uses: actions/checkout@main
       with:
         submodules: recursive
-    - run: mkdir -p include/.
     - run: sudo apt update && sudo apt install -y clang libclang-dev
     #- run: find /usr/lib/llvm-* -type d -name clang-c
     #- run: find /usr/lib/llvm-* -name libclang.so

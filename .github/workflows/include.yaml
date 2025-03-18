@@ -15,8 +15,8 @@ jobs:
         submodules: recursive
     - run: mkdir -p include/.
     - run: sudo apt update && sudo apt install -y libclang-dev
-    - run: ls -l /usr/lib
-    - run: clang -o foreign -I/usr/lib/llvm-*/include -lclang 2src/foreign.c && ./foreign src/libyaml/include/yaml.h 1>include/foreign.scm
+    - run: ls -l /usr/lib/llvm-*
+    - run: bash -c 'clang -o foreign -I/usr/lib/llvm-*/include -lclang 2src/foreign.c' && ./foreign src/libyaml/include/yaml.h 1>include/foreign.scm
     - name: foreign.scm
       run: |
         git config user.name  ${{ github.event.repository.owner.name  }}

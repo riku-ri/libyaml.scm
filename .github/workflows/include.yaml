@@ -11,7 +11,7 @@ jobs:
     steps:
     - uses: actions/checkout@main
       with:
-        submodules: false
+        submodules: recursive
     - run: sudo apt update && sudo apt install -y clang libclang-dev autoconf
     #- run: find /usr/lib/llvm-* -type d -name clang-c
     #- run: find /usr/lib/llvm-* -name libclang.so

@@ -1,8 +1,6 @@
 on:
   push:
-    branches:
-    - main
-  pull_request:
+#  pull_request: # in pull_request, github action is in a detached HEAD
 permissions:
   contents: write
 #env:

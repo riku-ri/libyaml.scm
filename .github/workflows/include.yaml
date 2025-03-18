@@ -15,12 +15,13 @@ jobs:
         submodules: recursive
     - run: mkdir -p include/.
     - run: sudo apt update && sudo apt install -y clang libclang-dev
-    - run: find /usr/lib/llvm-* -type d -name clang-c
-    - run: find /usr/lib/llvm-* -name libclang.so
-    - run: |
+    #- run: find /usr/lib/llvm-* -type d -name clang-c
+    #- run: find /usr/lib/llvm-* -name libclang.so
+    - name: foreign.scm
+      run: |
         find /usr/lib/llvm-* -type d -name clang-c -exec ln -sfT {}/.. ./usr \;
-        find /usr/lib/llvm-* -name libclang.so -exec ln -sf {} . \;
-        clang -o foreign -I./usr/. -L. -lclang 2src/foreign.c
+        find /usr/lib/llvm-* -name libclang.so -exec ln -sf {} ./lib/. \;
+        clang -o foreign -I./usr/. -L./lib/. -lclang 2src/foreign.c
         ./foreign src/libyaml/include/yaml.h 1>include/foreign.scm
     - name: foreign.scm
       run: |

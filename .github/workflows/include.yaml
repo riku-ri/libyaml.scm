@@ -28,5 +28,5 @@ jobs:
         git config user.name  ${{ github.event.repository.owner.name  }}
         git config user.email ${{ github.event.repository.owner.email }}
         git add include/foreign.scm
-        git diff-index --quiet HEAD || git commit -m '[auto][from github action][foreign.scm]'
+        git diff-index HEAD || git commit -m '[auto][from github action][foreign.scm]'
         git push

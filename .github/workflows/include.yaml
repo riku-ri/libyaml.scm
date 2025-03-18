@@ -26,7 +26,6 @@ jobs:
       working-directory: ./src/libyaml
     - run: mv ./src/libyaml/include/config.h ./include/.
     - name: diff and push
-    - name: diff and push
       run: |
         git config user.name  ${{ github.event.repository.owner.name  }}
         git config user.email ${{ github.event.repository.owner.email }}

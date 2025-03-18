@@ -1,0 +1,24 @@
+on:
+  push:
+  pull_request:
+permissions:
+  contents: write
+env:
+  env: env
+  #GITHUB_CONTEX: ${{ toJson(github) }}
+jobs:
+  foreign.scm:
+    runs-on: ubuntu-latest #public
+    steps:
+    - uses: actions/checkout@main
+      with:
+        submodules: recursive
+    - run: mkdir -p include/.
+    - run: clang -o foreign -lclang 2src/foreign.c && ./foreign src/libyaml/include/yaml.h 1>include/foreign.scm
+    - name: foreign.scm
+      run: |
+        git config user.name  ${{ github.event.repository.owner.name  }}
+        git config user.email ${{ github.event.repository.owner.email }}
+        git add include/foreign.scm
+        git diff-index --quiet HEAD || git commit -m '[auto][from github action][lincese]'
+        git push

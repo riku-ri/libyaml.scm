@@ -23,7 +23,7 @@ jobs:
         find /usr/lib/llvm-* -name libclang.so -exec ln -sf {} ./lib/. \;
         clang -o foreign -I./usr/. -L./lib/. -lclang 2src/foreign.c
         ./foreign src/libyaml/include/yaml.h 1>include/foreign.scm
-    - name: foreign.scm
+    - name: diff and push
       run: |
         git config user.name  ${{ github.event.repository.owner.name  }}
         git config user.email ${{ github.event.repository.owner.email }}

@@ -5,8 +5,8 @@ on:
   pull_request:
 permissions:
   contents: write
-env:
-  GITHUB_CONTEX: ${{ toJson(github) }}
+#env:
+#  GITHUB_CONTEX: ${{ toJson(github) }}
 jobs:
   foreign:
     runs-on: ubuntu-latest #public
@@ -26,8 +26,6 @@ jobs:
         ./foreign src/libyaml/include/yaml.h 1>include/foreign.scm
     - name: diff and push
       run: |
-        git config user.name  ${{ github.event.repository.owner.name  }}
-        git config user.email ${{ github.event.repository.owner.email }}
         git add include/foreign.scm
         git diff-index --quiet HEAD || git commit -m '[auto][from github action][foreign.scm]'
         git push

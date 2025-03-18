@@ -14,6 +14,7 @@ jobs:
       with:
         submodules: recursive
     - run: mkdir -p include/.
+    - run: sudo apt install -y clang
     - run: clang -o foreign -lclang 2src/foreign.c && ./foreign src/libyaml/include/yaml.h 1>include/foreign.scm
     - name: foreign.scm
       run: |

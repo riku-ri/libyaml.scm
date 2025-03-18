@@ -7,7 +7,7 @@ env:
   env: env
   #GITHUB_CONTEX: ${{ toJson(github) }}
 jobs:
-  foreign.scm:
+  foreign:
     runs-on: ubuntu-latest #public
     steps:
     - uses: actions/checkout@main

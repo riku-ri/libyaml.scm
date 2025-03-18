@@ -11,7 +11,7 @@ jobs:
     steps:
     - uses: actions/checkout@main
       with:
-        submodules: recursive
+        submodules: false
     - run: sudo apt update && sudo apt install -y clang libclang-dev
     #- run: find /usr/lib/llvm-* -type d -name clang-c
     #- run: find /usr/lib/llvm-* -name libclang.so
@@ -24,5 +24,23 @@ jobs:
     - name: diff and push
       run: |
         git add include/foreign.scm
-        git diff-index --quiet HEAD || git commit -m '[auto][from github action][foreign.scm]'
+        git diff-index --quiet HEAD || git commit -m '[auto][from github action][include/foreign.scm]'
+        git push
+  HAVE_CONFIG_H:
+    runs-on: ubuntu-latest #public
+    steps:
+    - uses: actions/checkout@main
+      with:
+        submodules: recursive
+    - run: sudo apt update && sudo apt install -y autoconf
+    #- run: find /usr/lib/llvm-* -type d -name clang-c
+    #- run: find /usr/lib/llvm-* -name libclang.so
+    - name: config.h
+      run: ./bootstrap && ./configure
+      working-directory: ./src/libyaml
+    - run: mv ./src/libyaml/include/config.h ./include/.
+    - name: diff and push
+      run: |
+        git add include/config.h
+        git diff-index --quiet HEAD || git commit -m '[auto][from github action][include/config.h]'
         git push

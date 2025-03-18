@@ -1,1 +1,1 @@
-# chicken-libyaml
+# libyaml.scm

@@ -34,8 +34,8 @@ section structure will follow
 		- yaml `{key: value}`  
 		=> scheme `(lambda () (list (cons "key" "value")))`
 	- atom data  
-		Atom datas are divided according to the
-		[Tag Resolution section ofyaml 1.2 spec](https://yaml.org/spec/1.2.2/) :
+		Atom datas are divided according to the *Tag Resolution section* of
+		[yaml 1.2 spec](https://yaml.org/spec/1.2.2/) :
 		- yaml `null`  
 		=> scheme empty list, *i.e.* `(list)` or `'()`
 		- yaml `true` `false`  

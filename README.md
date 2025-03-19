@@ -170,6 +170,8 @@ replace procedure to its result.
 ```
 
 `ARGUMENTS` :
+- `SCHEME-YAML-OBJECT` *necessary*  
+	The same as `<-yaml`
 - `'(#:swap-when . COMPARE)`  
 	The compare procedure for sorting.  
 	This should be a lambda that accept 2 arguments.

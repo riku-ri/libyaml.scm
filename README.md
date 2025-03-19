@@ -18,6 +18,14 @@ section structure will follow
 
 ## API
 
+### Values in `yaml.h`
+
+[`2src/foreign.c`](2src/foreign.c) will export enum members and functions in `yaml.h` from [yaml/libyaml](https://github.com/yaml/libyaml).
+
+This is saved in [`include/foreign.scm`](include/foreign.scm).
+
+Functions and enum members can be used in scheme code directly.
+
 ### Read yaml file or string
 
 ```

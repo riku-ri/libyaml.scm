@@ -18,7 +18,7 @@ section structure will follow
 
 ## API
 
-### Read yaml file
+### Read yaml file or string
 
 ```
 (yaml<- ARGUMENTS) --> SCHEME-YAML-OBJECT
@@ -133,7 +133,7 @@ will be
 	The first argument to `<-yaml` must be a `SCHEME-YAML-OBJECT`.  
 	Generally this may be the result of `yaml<-`,
 	you can also construct a object manually follow the above structure definition in
-	*Read yaml file* section.
+	*Read yaml file or string* section.
 - `'(#:indent . INDENT)`  
 	`INDENT` should be a integer, the indent size in the output yaml file
 - `'(#:port . PORT)`  
@@ -159,7 +159,7 @@ will be
 
 #### Show the yaml-mapping
 
-As definition in *Read yaml file* section,
+As definition in *Read yaml file or string* section,
 yaml-mapping will be a procedure that generate a "association list".
 So `print` `display` them will just show a hided procedure but not its content.
 `mapping-ordered-yaml<-` will recursively sort a `SCHEME-YAML-OBJECT` and
@@ -198,7 +198,7 @@ so you cannot distinguish yaml-mapping and yaml-list in it.
 ```
 
 `in-yaml-mapping?` will return `#t` if `KEY` is in `MAPPING`.
-As definition in *Read yaml file* section,
+As definition in *Read yaml file or string* section,
 `MAPPING` should be a procedure that generate a "association list".
 
 `in-yaml-mapping?` will compare by `equal?`

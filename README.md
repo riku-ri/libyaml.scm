@@ -109,7 +109,7 @@ will be
 	`YAML_UTF16LE_ENCODING`
 	`YAML_UTF16BE_ENCODING` .
 	That is the element of `enumml_encoding_e` defined in the C language header file
-	`yaml.h` from [yaml/libyaml](src/libyaml) .  
+	`yaml.h` from [yaml/libyaml](https://github.com/yaml/libyaml) .  
 	If not set, this will be `YAML_ANY_ENCODING` .
 
 ##### Examples

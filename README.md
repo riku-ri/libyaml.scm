@@ -21,7 +21,7 @@ section structure will follow
 ### Read yaml file or string
 
 ```
-(yaml<- ARGUMENTS) --> SCHEME-YAML-OBJECT
+(yaml<- [ARGUMENTS]) --> SCHEME-YAML-OBJECT
 ```
 
 #### `SCHEME-YAML-OBJECT`

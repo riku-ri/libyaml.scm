@@ -93,7 +93,7 @@ will be
 )
 ```
 
-#### `ARGUMENTS`
+#### Arguments
 
 - `'(#:input . INPUT)`  
 	`INPUT` should be a input port or yaml string.  
@@ -127,7 +127,7 @@ will be
 (<-yaml SCHEME-YAML-OBJECT [ARGUMENTS])
 ```
 
-#### `ARGUMENTS`
+#### Arguments
 
 - `SCHEME-YAML-OBJECT` *necessary*  
 	The first argument to `<-yaml` must be a `SCHEME-YAML-OBJECT`.  
@@ -169,7 +169,7 @@ replace procedure to its result.
 (mapping-ordered-yaml<- SCHEME-YAML-OBJECT [ARGUMENTS])
 ```
 
-`ARGUMENTS` :
+Arguments :
 - `SCHEME-YAML-OBJECT` *necessary*  
 	The same as `<-yaml`
 - `'(#:swap-when . COMPARE)`  

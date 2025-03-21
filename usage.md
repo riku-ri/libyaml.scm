@@ -121,10 +121,34 @@ will be
 ##### Examples
 
 ```lisp
-(yaml<-) ; generally, this will read from stdin
-(yaml<- `(#:input . ,(open-input-file "/tmp/tmp.yaml")))
+(import libyaml)
+
+(write (yaml<-)) ; generally, this will read from stdin
+```
+
+> For example, after saving above code in a file named `tmp.scm`,
+> call The CHICKEN Scheme interpreter `csi` :  
+> `echo '[a,b,c]' | csi -s tmp.scm`  
+> will print `(("a" "b" "c"))`
+
+---
+
+```lisp
+(import yaml)
+(write (yaml<- `(#:input . ,(open-input-file "/tmp/tmp.yaml"))))
+```
+
+> You need to create file `/tmp/tmp.yaml` and write yaml content to it
+
+---
+
+```lisp
+(import libyaml)
+
+(map print (list
 (yaml<- (cons #:encoding YAML_UTF8_ENCODING) '(#:input . "--- string"))
 (yaml<- '(#:input . "--- another string") `(#:encoding . ,YAML_ANY_ENCODING))
+))
 ```
 
 ### Dump yaml object
@@ -154,9 +178,12 @@ will be
 ##### Examples
 
 ```lisp
-(let ((yaml (yaml<- '(#:input . "[a, b, c]")))
+(import libyaml)
+
+(let ((yaml (yaml<- '(#:input . "[a, b, c]"))))
 	(<-yaml yaml) ; generally, this will print to screen
-	(<-yaml yaml '(#:port . (open-output-file "/tmp/tmp.yaml"))) ; output to /tmp/tmp.yaml
+	(<-yaml yaml `(#:port . ,(open-output-file "/tmp/tmp.yaml"))) ; output to /tmp/tmp.yaml
+	; Note that do not quote the port
 	(<-yaml yaml '(#:indent . 4) `(#:encoding . ,YAML_UTF8_ENCODING))
 )
 ```
@@ -221,20 +248,87 @@ but `in-yaml-mapping??` will compare by `epv?`,
 ## Examples
 
 ```lisp
+(import libyaml)
+
 (set! yaml (yaml<- `(#:input . "{c: d, a: b}")))
-(print yaml)) ; will be a list that only contain 1 procedure (#<procedure>)
-(print (mapping-ordered-yaml<- yaml)) ; --> (((a . b) (c . d)))
+(map print (list
+yaml ; will be a list that only contain 1 procedure (#<procedure>)
+(mapping-ordered-yaml<- yaml) ; --> (((a . b) (c . d)))
 (procedure? yaml) ; --> #f the top-level is always a list of yaml-document
 (list? (car yaml)) ; --> #f
 (procedure? (car yaml)) ; --> #t this way to check if it is a yaml-mapping
-(in-yaml-mapping? yaml "a") ; --> #f
+; (in-yaml-mapping? yaml "a") ; --> ERROR because the top level is always a list but not mapping
 (in-yaml-mapping? (car yaml) "a") ; --> #t
 (in-yaml-mapping? (car yaml) "x") ; --> #f
+))
 
 (set! yaml (yaml<- `(#:input . "[1, 2, -.inf, string]")))
-(print yaml) ; --> ((1 2 -inf.0 "string"))
+(map print (list
+yaml ; --> ((1 2 -inf.0 "string"))
 (list? (car yaml)) ; --> #t
 (map number? (car yaml)) ; --> (#t #t #t #f)
+))
+```
+
+---
+
+Content of `tmp.yaml`:
+```yaml
+- replace me: This will be changed
+- a internal mapping:
+    replace me: This will be changed
+- replace me
+- - replace me
+- ignored
+- 3.32 # number, also ignored
+```
+
+Content of `tmp.scm`:
+> Replace all `replace me` to `HERE` when it is a element of list,
+> or replace the value of it if the mapping key is `replace me`
+```lisp
+(import libyaml)
+
+(define (replace-yaml-document yaml)
+	(cond
+		((list? yaml) (map replace-yaml-document yaml))
+		((procedure? yaml)
+			(let ((mapping (yaml)))
+				(lambda ()  ; keep making mapping a procedure to distinguish mapping and list in the result
+					(map
+						(lambda (pair)
+							(let*
+								(
+									(key
+										(cond
+											((procedure? (car pair)) (replace-yaml-document (car pair))) ; the key of mapping is a mapping
+											((list? (car pair)) (replace-yaml-document (car pair))) ; the key of mapping is a list
+											(else (car pair))
+										))
+									(value
+										(if (string? key)
+											(if (string=? key "replace me")
+												"HERE"
+												(replace-yaml-document (cdr pair)))
+											(replace-yaml-document (cdr pair))))
+								)
+								(cons key value)
+							))
+						mapping
+					))))
+		(else
+			(if (string? yaml)
+				(if (string=? yaml "replace me") "HERE" yaml)
+				yaml))
+	)
+)
+
+(let ((yaml (yaml<- `(#:input . ,(open-input-file "tmp.yaml")))))
+	(print (map replace-yaml-document yaml)) ; mapping will not print
+	(print (mapping-ordered-yaml<- (map replace-yaml-document yaml))) ; mapping will be print
+	(print (make-string 32 #\#))
+	(<-yaml yaml) ; print to stdout, generally screen
+)
 ```
 
 ## License

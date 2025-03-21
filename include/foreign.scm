@@ -184,7 +184,7 @@
 (define yaml_parser_set_input_string (foreign-lambda void "yaml_parser_set_input_string"
 	c-pointer
 	c-string
-	unsigned long))
+	size_t))
 (define yaml_parser_set_input_file (foreign-lambda void "yaml_parser_set_input_file"
 	c-pointer
 	c-pointer))
@@ -231,7 +231,7 @@
 (define yaml_emitter_set_output_string (foreign-lambda void "yaml_emitter_set_output_string"
 	c-pointer
 	c-string
-	unsigned long
+	size_t
 	c-pointer))
 (define yaml_emitter_set_output_file (foreign-lambda void "yaml_emitter_set_output_file"
 	c-pointer

@@ -30,7 +30,7 @@ jobs:
         cat libyaml.egg.m4 | ./2src/m42egg.sh | tee libyaml.egg
     - name: diff and push
       run: |
-        git config user.name  ${{ github.event.actor }}
+        git config user.name  ${{ github.actor }}
         git add include/foreign.scm
         git add include/config.h
         git add libyaml.egg

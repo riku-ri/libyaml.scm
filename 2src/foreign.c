@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <clang-c/Index.h>
 
+#define MAX_strlen 0x100
+
 extern enum CXChildVisitResult definitions
 (
 	CXCursor cursor ,
@@ -21,12 +23,13 @@ main(int argc , char * argv[])
 	if(argc <= 0) exit(0);
 	CXIndex clang_index = clang_createIndex(0 , 0);
 	for(size_t i=0 ; i<sizeof(header)/sizeof(*header) ; i++) printf("%s\n" , header[i]);
+	const char * args[] = {"-I."};
 	CXTranslationUnit clang_tran_unit = clang_parseTranslationUnit
 	(
 		clang_index ,
 		argv[1] ,
-		NULL ,
-		0 ,
+		args ,
+		sizeof(args)/sizeof(*args) ,
 		NULL ,
 		0 ,
 		CXTranslationUnit_None
@@ -122,6 +125,9 @@ definitions
 			abort();
 		}
 		const char * typestring = clang_getCString(cxtruetype);
+		CXString maybe_size_t = clang_getTypeSpelling(type);
+		if(strcmp("size_t" , clang_getCString(maybe_size_t))==0) typestring = "size_t";
+		clang_disposeString(maybe_size_t);
 		if(truetype.kind==CXType_Pointer)
 		{
 			CXType endpoint = clang_getTypedefDeclUnderlyingType(
@@ -137,12 +143,19 @@ definitions
 			else typestring = "c-pointer";
 		}
 		else if(_is(CXCursor_EnumDecl , type)) typestring = "int";
+		char * replace_whitespace = (char*)malloc(strnlen(typestring , MAX_strlen) + 1);
+		memset(replace_whitespace , 0 , strnlen(typestring , MAX_strlen) + 1);
+		strncpy(replace_whitespace , typestring , strnlen(typestring , MAX_strlen));
+		char * r = replace_whitespace; r--;
+		while(++*r) if(*r==' ') *r = '-' ;
 		printf("(define %s (foreign-lambda %s \"%s\"" ,
 			clang_getCString(cxstring) ,
-			typestring ,
+			replace_whitespace ,
 			clang_getCString(cxstring)
 		);
+		free(replace_whitespace);
 		clang_disposeString(cxtruetype);
+
 		for(int i=0 ; i<clang_Cursor_getNumArguments(cursor) ; i++)
 		{
 			CXCursor _cursor = clang_Cursor_getArgument(cursor , i);
@@ -163,6 +176,9 @@ definitions
 				abort();
 			}
 			const char * typestring = clang_getCString(cxtruetype);
+			CXString maybe_size_t = clang_getTypeSpelling(type);
+			if(strcmp("size_t" , clang_getCString(maybe_size_t))==0) typestring = "size_t";
+			clang_disposeString(maybe_size_t);
 			if(truetype.kind==CXType_Pointer)
 			{
 				CXType endpoint = clang_getTypedefDeclUnderlyingType(
@@ -178,7 +194,13 @@ definitions
 				else typestring = "c-pointer";
 			}
 			else if(_is(CXCursor_EnumDecl , type)) typestring = "int";
-			printf("\n\t%s" , typestring);
+			char * replace_whitespace = (char*)malloc(strnlen(typestring , MAX_strlen) + 1);
+			memset(replace_whitespace , 0 , strnlen(typestring , MAX_strlen) + 1);
+			strncpy(replace_whitespace , typestring , strnlen(typestring , MAX_strlen));
+			char * r = replace_whitespace; r--;
+			while(++*r) if(*r==' ') *r = '-' ;
+			printf("\n\t%s" , replace_whitespace);
+			free(replace_whitespace);
 			clang_disposeString(cxtruetype);
 		}
 		printf("))\n");

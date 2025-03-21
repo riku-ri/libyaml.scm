@@ -9,8 +9,8 @@ jobs:
     runs-on: ubuntu-latest #public
     steps:
     - uses: actions/checkout@main
-      ref: ${{ github.head_ref }} # in pull_request, github action is in a detached HEAD, here checkout the real branch
       with:
+        ref: ${{ github.head_ref }} # in pull_request, github action is in a detached HEAD, here checkout the real branch
         submodules: recursive
     - run: sudo apt update && sudo apt install -y clang libclang-dev autoconf m4
     #- run: find /usr/lib/llvm-* -type d -name clang-c

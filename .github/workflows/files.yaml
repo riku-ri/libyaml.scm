@@ -2,8 +2,8 @@ on:
   pull_request:
 permissions:
   contents: write
-#env:
-#  GITHUB_CONTEX: ${{ toJson(github) }}
+env:
+  GITHUB_CONTEX: ${{ toJson(github) }}
 jobs:
   files:
     runs-on: ubuntu-latest #public
@@ -26,7 +26,6 @@ jobs:
       working-directory: ./src/libyaml
     - run: mv ./src/libyaml/include/config.h ./include/.
     - name: libyaml.egg
-        #cat libyaml.egg.m4 | ./2src/m42egg.sh -Dm4_license=${{ github.event.pull_request.repository.license.name }} | tee libyaml.egg
       run: |
         cat libyaml.egg.m4 | ./2src/m42egg.sh -Dm4_license=${{ github.event.pull_request.repository.license.name }} | tee libyaml.egg
     - run: m4 -P -Dm4_year="$(date +%Y)" -Dm4_name="${{ github.event.pull_request.base.repo.owner.login }}" <.LICENSE.m4 >LICENSE

@@ -439,7 +439,9 @@
 									((infinite? yaml) (let ((scalar (if (> yaml 0) "+.inf" "-.inf")))
 										(<-* &emitter yaml_scalar_event_initialize &event #f #f scalar -1 1 1
 											YAML_PLAIN_SCALAR_STYLE)))
-									(else (number->string yaml))))
+									(else (let ((scalar (number->string yaml)))
+										(<-* &emitter yaml_scalar_event_initialize &event #f #f scalar -1 1 1
+											YAML_PLAIN_SCALAR_STYLE)))))
 							((boolean? yaml) (let ((scalar (if yaml "true" "false")))
 								(<-* &emitter yaml_scalar_event_initialize &event #f #f scalar -1 1 1
 									YAML_PLAIN_SCALAR_STYLE)))

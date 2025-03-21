@@ -280,6 +280,7 @@ Content of `tmp.yaml`:
 - replace me
 - - replace me
 - ignored
+- "3.32" # string , also ignored
 - 3.32 # number, also ignored
 ```
 
@@ -327,21 +328,23 @@ Content of `tmp.scm`:
 	(print (map replace-yaml-document yaml)) ; mapping will not print
 	(print (mapping-ordered-yaml<- (map replace-yaml-document yaml))) ; mapping will be print
 	(print (make-string 32 #\#))
-	(<-yaml yaml) ; print to stdout, generally screen
+	(<-yaml (map replace-yaml-document yaml)) ; print to stdout, generally screen
 )
 ```
 
 Output:
 ```
-((#<procedure (?)> #<procedure (?)> HERE (HERE) ignored 3.32))                                                                                                                                 ((((replace me . HERE)) ((a internal mapping (replace me . HERE))) HERE (HERE) ignored 3.32))
+((#<procedure (?)> #<procedure (?)> HERE (HERE) ignored 3.32 3.32))                                                                                                                            ((((replace me . HERE)) ((a internal mapping (replace me . HERE))) HERE (HERE) ignored 3.32 3.32))
 ################################
 ---
-- 'replace me': 'This will be changed'
-- 'a internal mapping':
-    'replace me': 'This will be changed'
-- 'replace me'
-- - 'replace me'
-- 'ignored'
+- replace me: HERE
+- a internal mapping:
+    replace me: HERE
+- HERE
+- - HERE
+- ignored
+- '3.32'
+- 3.32
 ...
 ```
 

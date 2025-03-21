@@ -33,6 +33,7 @@ jobs:
     - name: diff and push
       run: |
         git config user.name ${{ github.actor }}
+        git config user.email ""
         git add include/foreign.scm
         git add include/config.h
         git add libyaml.egg

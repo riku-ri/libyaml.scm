@@ -1,8 +1,5 @@
 on:
-  push:
-    branches:
-    - main
-  #pull_request:
+  pull_request:
 permissions:
   contents: write
 #env:
@@ -16,8 +13,7 @@ jobs:
     - run: m4 -P -Dm4_year="$(date +%Y)" -Dm4_email="${{ github.event.repository.owner.email }}" -Dm4_name="${{ github.event.repository.owner.login }}" <.LICENSE.m4 >LICENSE
     - name: license
       run: |
-        git config user.name  ${{ github.event.repository.owner.name  }}
-        git config user.email ${{ github.event.repository.owner.email }}
+        git config user.name ${{ github.event.pull_request.base.repo.owner.login }}
         git add LICENSE
         git diff-index --quiet HEAD || git commit -m '[auto][from github action][lincese]'
-        git push -f
+        git push

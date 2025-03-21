@@ -20,4 +20,4 @@ jobs:
         git config user.email ${{ github.event.repository.owner.email }}
         git add LICENSE
         git diff-index --quiet HEAD || git commit -m '[auto][from github action][lincese]'
-        git push
+        git push -f

@@ -120,11 +120,35 @@ will be
 
 ##### Examples
 
+---
+
 ```lisp
-(yaml<-) ; generally, this will read from stdin
-(yaml<- `(#:input . ,(open-input-file "/tmp/tmp.yaml")))
+(import libyaml)
+(write (yaml<-)) ; generally, this will read from stdin
+```
+
+> For example, after saving above code in a file named `tmp.scm`,
+> call The CHICKEN Scheme interpreter `csi` :  
+> `echo '[a,b,c]' | csi -s tmp.scm`  
+> will print `(("a" "b" "c"))`
+
+---
+
+```lisp
+(import yaml)
+(write (yaml<- `(#:input . ,(open-input-file "/tmp/tmp.yaml"))))
+```
+
+> You need to create file `/tmp/tmp.yaml` and write yaml content to it
+
+---
+
+```lisp
+(import libyaml)
+(map print (list
 (yaml<- (cons #:encoding YAML_UTF8_ENCODING) '(#:input . "--- string"))
 (yaml<- '(#:input . "--- another string") `(#:encoding . ,YAML_ANY_ENCODING))
+))
 ```
 
 ### Dump yaml object

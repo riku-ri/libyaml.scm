@@ -1,6 +1,5 @@
 on:
-  push:
-#  pull_request: # in pull_request, github action is in a detached HEAD
+  pull_request:
 permissions:
   contents: write
 #env:
@@ -11,6 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@main
       with:
+        ref: ${{ github.head_ref }} # in pull_request, github action is in a detached HEAD, here checkout the real branch
         submodules: recursive
     - run: sudo apt update && sudo apt install -y clang libclang-dev autoconf m4
     #- run: find /usr/lib/llvm-* -type d -name clang-c
@@ -30,8 +30,7 @@ jobs:
         cat libyaml.egg.m4 | ./2src/m42egg.sh | tee libyaml.egg
     - name: diff and push
       run: |
-        git config user.name  ${{ github.event.repository.owner.name  }}
-        git config user.email ${{ github.event.repository.owner.email }}
+        git config user.name ${{ github.actor }}
         git add include/foreign.scm
         git add include/config.h
         git add libyaml.egg

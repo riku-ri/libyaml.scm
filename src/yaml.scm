@@ -427,9 +427,10 @@
 										(style (cond
 											((< 1 (length (string-split yaml "\n" #t))) YAML_LITERAL_SCALAR_STYLE)
 											(else YAML_PLAIN_SCALAR_STYLE)))
+										(plain_implicit (if (string? (car (yaml<- `(#:input . ,yaml)))) 1 0))
 									)
-									(<-* &emitter yaml_scalar_event_initialize &event #f #f yaml -1 0 1
-										style)))
+									(<-* &emitter yaml_scalar_event_initialize
+										&event #f #f yaml -1 plain_implicit 1 style)))
 							((number? yaml)
 								(cond
 									((nan? yaml) (let ((scalar ".nan"))

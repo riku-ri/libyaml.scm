@@ -453,14 +453,3 @@
 )
 
 )
-
-;(import libyaml)
-;(import (chicken pretty-print))
-;(import (chicken foreign))
-;(define-syntax write/ (syntax-rules ()
-;	((write/ towrite ...)
-;		(let () (write towrite ...) (print "")))))
-;
-;(define yaml (yaml<-)) ;FIXME: c-string vs c-pointe
-;(print (mapping-ordered-yaml<- yaml))
-;(<-yaml yaml)

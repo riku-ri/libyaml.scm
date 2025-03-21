@@ -37,4 +37,3 @@ jobs:
         git add libyaml.egg
         git diff-index --quiet HEAD || git commit -m '[auto][from github action][include/foreign.scm]'
         git push
-      if: github.event_name == 'push'

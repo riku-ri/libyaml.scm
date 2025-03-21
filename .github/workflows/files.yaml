@@ -12,7 +12,7 @@ jobs:
     - uses: actions/checkout@main
       with:
         submodules: recursive
-    - run: sudo apt update && sudo apt install -y clang libclang-dev autoconf
+    - run: sudo apt update && sudo apt install -y clang libclang-dev autoconf m4
     #- run: find /usr/lib/llvm-* -type d -name clang-c
     #- run: find /usr/lib/llvm-* -name libclang.so
     - name: foreign.scm

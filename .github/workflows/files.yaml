@@ -1,4 +1,3 @@
-name: include
 on:
   push:
 #  pull_request: # in pull_request, github action is in a detached HEAD
@@ -26,11 +25,15 @@ jobs:
       run: ./bootstrap && ./configure
       working-directory: ./src/libyaml
     - run: mv ./src/libyaml/include/config.h ./include/.
+    - name: libyaml.egg
+      run: |
+        cat libyaml.egg.m4 | ./2src/m42egg.sh | tee libyaml.egg
     - name: diff and push
       run: |
         git config user.name  ${{ github.event.repository.owner.name  }}
         git config user.email ${{ github.event.repository.owner.email }}
         git add include/foreign.scm
         git add include/config.h
+        git add include/libyaml.egg
         git diff-index --quiet HEAD || git commit -m '[auto][from github action][include/foreign.scm]'
         git push

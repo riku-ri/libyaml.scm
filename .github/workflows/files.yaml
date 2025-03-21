@@ -1,6 +1,6 @@
 on:
   push:
-#  pull_request: # in pull_request, github action is in a detached HEAD
+  pull_request:
 permissions:
   contents: write
 #env:
@@ -37,3 +37,5 @@ jobs:
         git add libyaml.egg
         git diff-index --quiet HEAD || git commit -m '[auto][from github action][include/foreign.scm]'
         git push
+      if: github.event_name == 'push'
+# in pull_request, github action is in a detached HEAD

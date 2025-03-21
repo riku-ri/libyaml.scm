@@ -1,6 +1,6 @@
 (
 
-(license "m4_license())"
+(license "m4_license()")
 (components
 m4_libyaml_c_object()
 (extension libyaml

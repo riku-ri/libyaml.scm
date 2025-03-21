@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) m4_year() m4_name() m4_email()
+Copyright (c) m4_year() m4_name() riku.ri@outlook.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

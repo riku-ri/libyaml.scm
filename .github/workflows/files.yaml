@@ -6,13 +6,13 @@ permissions:
 #env:
 #  GITHUB_CONTEX: ${{ toJson(github) }}
 jobs:
-  include:
+  files:
     runs-on: ubuntu-latest #public
     steps:
     - uses: actions/checkout@main
       with:
         submodules: recursive
-    - run: sudo apt update && sudo apt install -y clang libclang-dev autoconf
+    - run: sudo apt update && sudo apt install -y clang libclang-dev autoconf m4
     #- run: find /usr/lib/llvm-* -type d -name clang-c
     #- run: find /usr/lib/llvm-* -name libclang.so
     - name: foreign.scm
@@ -25,11 +25,15 @@ jobs:
       run: ./bootstrap && ./configure
       working-directory: ./src/libyaml
     - run: mv ./src/libyaml/include/config.h ./include/.
+    - name: libyaml.egg
+      run: |
+        cat libyaml.egg.m4 | ./2src/m42egg.sh | tee libyaml.egg
     - name: diff and push
       run: |
         git config user.name  ${{ github.event.repository.owner.name  }}
         git config user.email ${{ github.event.repository.owner.email }}
         git add include/foreign.scm
         git add include/config.h
+        git add libyaml.egg
         git diff-index --quiet HEAD || git commit -m '[auto][from github action][include/foreign.scm]'
         git push

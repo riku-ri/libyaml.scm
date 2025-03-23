@@ -1,5 +1,10 @@
 on:
   workflow_dispatch:
+    inputs:
+      pr:
+        description: pull request number
+        required: true
+        type: number
 permissions:
   contents: read
 #env:

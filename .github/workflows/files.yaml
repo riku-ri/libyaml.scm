@@ -1,4 +1,5 @@
 on:
+  push:
   pull_request:
 permissions:
   contents: write
@@ -46,6 +47,7 @@ jobs:
         <.libyaml.scm.release-info.m4 | tee libyaml.scm.release-info
         test -s libyaml.scm.release-info
     - name: diff and push
+      if: github.event_name == 'pull_request'
       env:
         GITHUB_TOKEN: ${{ secrets.ACTION_AGAIN }}
       run: |

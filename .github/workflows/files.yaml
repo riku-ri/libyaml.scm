@@ -28,7 +28,7 @@ jobs:
     - name: libyaml.egg
       run: |
         ./2src/m42egg.sh \
-          -Dm4_author()=${{ github.event.pull_request.base.repo.owner.login }}
+          -Dm4_author=${{ github.event.pull_request.base.repo.owner.login }}
           -Dm4_license=${{ github.event.pull_request.head.repo.license.spdx_id }} |
           <.libyaml.egg.m4 | tee libyaml.egg
     - name: LICENSE

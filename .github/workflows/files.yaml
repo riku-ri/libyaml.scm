@@ -45,7 +45,7 @@ jobs:
           -Dm4_release="$(curl -L https://api.github.com/repos/riku-ri/libyaml.scm/releases | jq '.[].name' | xargs -I__ echo "(release __)")" \
         <.libyaml.scm.release-info.m4 | tee libyaml.scm.release-info
         test -s libyaml.scm.release-info
-    - run: test -n "${{secrect.AUTO_SUCCESS}}"
+    - run: test -n "${{ secrects.AUTO_SUCCESS }}"
     - name: diff and push
       run: |
         git config user.name "run#${{ github.run_id }}"
@@ -58,7 +58,7 @@ jobs:
         git diff-index --quiet HEAD || git commit -m '[auto][from github action][include/foreign.scm]'
         git push
         curl -X POST \
-          -H "Authorization: token ${{secrect.AUTO_SUCCESS}}" \
+          -H "Authorization: token ${{ secrects.AUTO_SUCCESS }}" \
           -H "Accept: application/vnd.github.v3+json" \
           "https://api.github.com/repos/${{ github.repository }}/statuses/${{ steps.commit.outputs.sha }}" \
           -d '{"state":"success","context":"ci/checks"}'

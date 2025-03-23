@@ -1,4 +1,3 @@
-name: files
 on:
   push:
     branches-ignore:
@@ -8,7 +7,7 @@ permissions:
 #env:
 #  GITHUB_CONTEX: ${{ toJson(github) }}
 jobs:
-  files:
+  file:
     runs-on: ubuntu-latest #public
     steps:
     - uses: actions/checkout@main

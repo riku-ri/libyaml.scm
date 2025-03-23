@@ -1,9 +1,7 @@
 on:
-  workflow_run:
-    workflows:
-    - files
+  repository_dispatch:
     types:
-    - completed
+    - file_check
 permissions:
   contents: read
 #env:

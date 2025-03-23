@@ -8,10 +8,12 @@ permissions:
 #  GITHUB_CONTEX: ${{ toJson(github) }}
 jobs:
   files:
-    if: github.event_name == 'pull_request'
     # the github action may commit again, to make the push in action refresh pull_request status, add push and ignore it
     runs-on: ubuntu-latest #public
     steps:
+    - name: exit_with_success when push
+      run: exit_with_success
+      if: github.event_name == 'push'
     - uses: actions/checkout@main
       with:
         ref: ${{ github.head_ref }} # in pull_request, github action is in a detached HEAD, here checkout the real branch

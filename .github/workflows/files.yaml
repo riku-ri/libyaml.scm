@@ -7,7 +7,7 @@ permissions:
 #  GITHUB_CONTEX: ${{ toJson(github) }}
 jobs:
   files:
-    if: ${{ github.event_name == "pull_request" }}  # the github action may commit again, to make the push in action refresh pull_request status, add push and ignore it
+    if: github.event_name == "pull_request" # the github action may commit again, to make the push in action refresh pull_request status, add push and ignore it
     runs-on: ubuntu-latest #public
     steps:
     - uses: actions/checkout@main

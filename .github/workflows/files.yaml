@@ -46,8 +46,6 @@ jobs:
           -Dm4_release="$(curl -L https://api.github.com/repos/riku-ri/libyaml.scm/releases | jq '.[].name' | xargs -I__ echo "(release __)")" \
         <.libyaml.scm.release-info.m4 | tee libyaml.scm.release-info
         test -s libyaml.scm.release-info
-    - run: |
-        echo "${{ steps.get_releases.outputs.releases }}"
     - name: diff and push
       if: github.event_name == 'pull_request' # the github action may commit again, to make the push in action refresh pull_request status, add push and ignore it
       run: |

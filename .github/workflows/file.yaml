@@ -1,5 +1,5 @@
 on:
-  pull_request:
+  push:
 permissions:
   contents: write
 #env:
@@ -10,8 +10,6 @@ jobs:
     steps:
     - uses: actions/checkout@main
       with:
-        repository: ${{ github.event.pull_request.head.repo.full_name }}
-        ref: ${{ github.head_ref }} # in pull_request, github action is in a detached HEAD, here checkout the real branch
         submodules: recursive
     - run: sudo apt update && sudo apt install -y clang libclang-dev autoconf m4 jq curl
     #- run: find /usr/lib/llvm-* -type d -name clang-c
@@ -26,18 +24,28 @@ jobs:
       run: ./bootstrap && ./configure
       working-directory: ./src/libyaml
     - run: mv ./src/libyaml/include/config.h ./include/.
-    - name: libyaml.egg
+    - name: static libyaml.egg
+      if: 'github.event.repository.fork'
       run: |
         ./2src/m42egg.sh \
-          -Dm4_author=${{ github.event.pull_request.base.repo.owner.login }} \
-          -Dm4_license=${{ github.event.pull_request.head.repo.license.spdx_id }} \
+          -Dm4_author="riku-ri" \
+          -Dm4_license="MIT" \
+        <.libyaml.egg.m4 | tee libyaml.egg
+        test -s libyaml.egg
+    - name: libyaml.egg
+      if: '!github.event.repository.fork'
+      run: |
+        ./2src/m42egg.sh \
+          -Dm4_author="${{ github.repository_owner }}" \
+          -Dm4_license=${{ github.event.repository.license.spdx_id }} \
         <.libyaml.egg.m4 | tee libyaml.egg
         test -s libyaml.egg
     - name: LICENSE
+      if: '!github.event.repository.fork'
       run: |
         m4 -P \
           -Dm4_year="$(date +%Y)" \
-          -Dm4_name="${{ github.event.pull_request.base.repo.owner.login }}" \
+          -Dm4_name="${{ github.repository_owner }}" \
         <.LICENSE.m4 | tee LICENSE
         test -s LICENSE
     - name: libyaml.scm.release-info

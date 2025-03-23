@@ -1,0 +1,42 @@
+(
+
+(version "1.0.0")
+(synopsis "A yaml parser based on libyaml")
+(author "riku-ri")
+(maintainer "riku-ri")
+(category parsing)
+(license "MIT")
+;(dependencies)
+;(test-dependencies test)
+;(build-dependencies)
+;(foreign-dependencies git)
+(platform (or linux unix))
+;((distribution-files)
+
+(components
+(c-object src/libyaml/src/scanner.c (source src/libyaml/src/scanner.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
+(c-object src/libyaml/src/reader.c (source src/libyaml/src/reader.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
+(c-object src/libyaml/src/api.c (source src/libyaml/src/api.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
+(c-object src/libyaml/src/parser.c (source src/libyaml/src/parser.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
+(c-object src/libyaml/src/writer.c (source src/libyaml/src/writer.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
+(c-object src/libyaml/src/loader.c (source src/libyaml/src/loader.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
+(c-object src/libyaml/src/dumper.c (source src/libyaml/src/dumper.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
+(c-object src/libyaml/src/emitter.c (source src/libyaml/src/emitter.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
+(extension libyaml
+(source src/yaml.scm)
+(objects
+src/libyaml/src/scanner.c
+src/libyaml/src/reader.c
+src/libyaml/src/api.c
+src/libyaml/src/parser.c
+src/libyaml/src/writer.c
+src/libyaml/src/loader.c
+src/libyaml/src/dumper.c
+src/libyaml/src/emitter.c
+)
+(csc-options "-I" "./include/." "-C" "-I./src/libyaml/include/.")
+(linkage dynamic)
+)
+)
+
+)

@@ -1,19 +1,14 @@
 on:
   pull_request:
-  push:
-  # the github action may commit again, to make the push in action refresh pull_request status, add push and ignore it
+  push: # the github action may commit again, to make the push in action refresh pull_request status, add push and ignore it
 permissions:
   contents: write
 #env:
 #  GITHUB_CONTEX: ${{ toJson(github) }}
 jobs:
   files:
-    # the github action may commit again, to make the push in action refresh pull_request status, add push and ignore it
     runs-on: ubuntu-latest #public
     steps:
-    - name: exit when push
-      run: exit
-      if: github.event_name == 'push'
     - uses: actions/checkout@main
       with:
         ref: ${{ github.head_ref }} # in pull_request, github action is in a detached HEAD, here checkout the real branch
@@ -54,6 +49,7 @@ jobs:
     - run: |
         echo "${{ steps.get_releases.outputs.releases }}"
     - name: diff and push
+      if: github.event_name == 'pull_request' # the github action may commit again, to make the push in action refresh pull_request status, add push and ignore it
       run: |
         git config user.name ${{ github.actor }}
         git config user.email ""

@@ -58,5 +58,5 @@ jobs:
         git add libyaml.egg
         git add LICENSE
         git add libyaml.scm.release-info
-        git diff-index --quiet HEAD || git commit -m '[skip ci][auto][from github action][include/foreign.scm]'
+        git diff-index --quiet HEAD || git commit -m '[auto][from github action][include/foreign.scm]'
         git push

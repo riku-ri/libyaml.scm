@@ -10,7 +10,7 @@ permissions:
 #env:
 #  GITHUB_CONTEX: ${{ toJson(github) }}
 jobs:
-  files:
+  files_check:
     runs-on: ubuntu-latest #public
     steps:
     - uses: actions/checkout@main

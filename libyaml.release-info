@@ -2,4 +2,4 @@
 
 (repo git "https://github.com/riku-ri/{egg-name}.git")
 (uri targz "https://github.com/riku-ri/{egg-name}/tarball/v{egg-release}")
-(release v1.0.0)
+(release "v1.0.0")

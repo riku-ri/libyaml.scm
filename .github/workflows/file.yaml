@@ -52,8 +52,8 @@ jobs:
       run: |
         m4 -P \
           -Dm4_release="$(curl -L https://api.github.com/repos/riku-ri/libyaml.scm/releases | jq '.[].name' | xargs -n1 cut -b2- | xargs -I__ echo "(release \"__\")")" \
-        <.libyaml.scm.release-info.m4 | tee libyaml.scm.release-info
-        test -s libyaml.scm.release-info
+        <.libyaml.release-info.m4 | tee libyaml.release-info
+        test -s libyaml.release-info
     - run: git status
     - run: git diff .
     - name: diff and push

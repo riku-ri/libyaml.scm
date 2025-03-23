@@ -18,11 +18,16 @@ section structure will follow
 
 ### Values in `yaml.h`
 
-[`2src/foreign.c`](2src/foreign.c) will export enum members and functions in `yaml.h` from [yaml/libyaml](https://github.com/yaml/libyaml).
-
-This is saved in [`include/foreign.scm`](include/foreign.scm).
+[libyaml.scm<sub>git</sub>](.) will
+export enum members and functions in
+[*yaml.h*](https://github.com/yaml/libyaml/blob/master/include/yaml.h) from
+[yaml/libyaml<sub>git</sub>](https://github.com/yaml/libyaml).
 
 Functions and enum members can be used in scheme code directly.
+
+> Note that you may install libyaml development package in your system,
+> but [libyaml.scm<sub>git</sub>](.) will use the *yaml.h* in
+> submodule *src/libyaml* but not the yaml.h in your system
 
 ### Read yaml file or string
 

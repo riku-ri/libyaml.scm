@@ -8,11 +8,9 @@ jobs:
   file:
     runs-on: ubuntu-latest #public
     steps:
-    - run: echo ${{ github.event.pull_request.head.repo.full_name }}
-    - run: echo ${{ github.head_ref }}
     - uses: actions/checkout@main
       with:
-        repository: ${{ github.event.pull_request.head.full_name }}
+        repository: ${{ github.event.pull_request.head.repo.full_name }}
         ref: ${{ github.head_ref }} # in pull_request, github action is in a detached HEAD, here checkout the real branch
         submodules: recursive
     - run: sudo apt update && sudo apt install -y clang libclang-dev autoconf m4 jq curl

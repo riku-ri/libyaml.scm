@@ -45,11 +45,8 @@ jobs:
           -Dm4_release="$(curl -L https://api.github.com/repos/riku-ri/libyaml.scm/releases | jq '.[].name' | xargs -I__ echo "(release __)")" \
         <.libyaml.scm.release-info.m4 | tee libyaml.scm.release-info
         test -s libyaml.scm.release-info
-    - run: test -n "${{ secrets.AUTO_SUCCESS }}"
     - name: diff and push
       run: |
-        git config user.name "run#${{ github.run_id }}"
-        git config user.email "run#${{ github.run_id }}@action.github.com"
         git add include/foreign.scm
         git add include/config.h
         git add libyaml.egg

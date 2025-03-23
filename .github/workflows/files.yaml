@@ -39,10 +39,11 @@ jobs:
           -Dm4_name="${{ github.event.pull_request.base.repo.owner.login }}" \
         <.LICENSE.m4 | tee LICENSE
         test -s LICENSE
-    - uses: yakubique/github-releases@v1.2
-      id: get_releases
-      with:
-        repository: riku-ri/libyaml.scm
+    - name: libyaml.scm.release-info
+      run: |
+        m4 -P \
+          -Dm4_release=$(curl -L https://api.github.com/repos/riku-ri/libyaml.scm/releases | jq '.[].name' | xargs -I__ echo "(release __)") \
+        <.libyaml.scm.release-info.m4 | tee libyaml.scm.release-info
     - run: |
         echo "${{ steps.get_releases.outputs.releases }}"
     - name: diff and push

@@ -61,6 +61,4 @@ jobs:
           -H "Authorization: token ${{ secrets.AUTO_SUCCESS }}" \
           -H "Accept: application/vnd.github.v3+json" \
           "https://api.github.com/repos/${{ github.repository }}/statuses/$(git rev-parse HEAD)" \
-          -d '{"state":"success","context":"ci/checks"}'
-    - name: set success after auto push
-      run: |
+          -d '{"state":"success","context":"${{ github.job }}"}'

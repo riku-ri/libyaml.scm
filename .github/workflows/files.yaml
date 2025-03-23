@@ -39,7 +39,6 @@ jobs:
           -Dm4_name="${{ github.event.pull_request.base.repo.owner.login }}" \
         <.LICENSE.m4 | tee LICENSE
         test -s LICENSE
-    - name: empty check
     - name: diff and push
       run: |
         git config user.name ${{ github.actor }}

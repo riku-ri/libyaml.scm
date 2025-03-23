@@ -48,8 +48,6 @@ jobs:
         test -s libyaml.scm.release-info
     - name: diff and push
       if: github.event_name == 'pull_request'
-      env:
-        GITHUB_TOKEN: ${{ secrets.ACTION_AGAIN }}
       run: |
         git config user.name "run#${{ github.run_id }}"
         git config user.email "run#${{ github.run_id }}@action.github.com"

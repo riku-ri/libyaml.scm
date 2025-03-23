@@ -4,10 +4,10 @@
 
 (version "1.0.0")
 (synopsis "A yaml parser based on libyaml")
-(author "riku-ri")
-(maintainer "riku-ri")
+(author "")
+(maintainer "")
 (category parsing)
-(license "MIT")
+(license "")
 ;(dependencies)
 ;(test-dependencies test)
 ;(build-dependencies)

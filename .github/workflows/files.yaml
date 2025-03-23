@@ -27,9 +27,18 @@ jobs:
     - run: mv ./src/libyaml/include/config.h ./include/.
     - name: libyaml.egg
       run: |
-        cat libyaml.egg.m4 | ./2src/m42egg.sh -Dm4_license=${{ github.event.pull_request.head.repo.license.spdx_id }} | tee libyaml.egg
+        ./2src/m42egg.sh \
+          -Dm4_author=${{ github.event.pull_request.base.repo.owner.login }} \
+          -Dm4_license=${{ github.event.pull_request.head.repo.license.spdx_id }} \
+        <.libyaml.egg.m4 | tee libyaml.egg
+        test -s libyaml.egg
     - name: LICENSE
-      run: m4 -P -Dm4_year="$(date +%Y)" -Dm4_name="${{ github.event.pull_request.base.repo.owner.login }}" <.LICENSE.m4 >LICENSE
+      run: |
+        m4 -P \
+          -Dm4_year="$(date +%Y)" \
+          -Dm4_name="${{ github.event.pull_request.base.repo.owner.login }}" \
+        <.LICENSE.m4 | tee LICENSE
+        test -s LICENSE
     - name: diff and push
       run: |
         git config user.name ${{ github.actor }}

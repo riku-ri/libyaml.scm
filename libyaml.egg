@@ -1,6 +1,18 @@
 (
 
+(version "1.0.0")
+(synopsis "A yaml parser based on libyaml")
+(author "riku-ri")
+(maintainer "riku-ri")
+(category parsing)
 (license "MIT")
+;(dependencies)
+;(test-dependencies test)
+;(build-dependencies)
+;(foreign-dependencies git)
+(platform (or linux unix))
+;((distribution-files)
+
 (components
 (c-object src/libyaml/src/scanner.c (source src/libyaml/src/scanner.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
 (c-object src/libyaml/src/reader.c (source src/libyaml/src/reader.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))

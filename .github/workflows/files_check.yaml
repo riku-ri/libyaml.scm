@@ -1,10 +1,13 @@
 on:
-  workflow_dispatch:
-    inputs:
-      pr:
-        description: pull request number
-        required: true
-        type: number
+  #workflow_dispatch:
+  #  inputs:
+  #    pr:
+  #      description: pull request number
+  #      required: true
+  #      type: number
+  pull_request:
+    branches:
+    - main
 permissions:
   contents: read
 #env:

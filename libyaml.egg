@@ -1,3 +1,5 @@
+;; vim: syntax=scheme
+
 (
 
 (version "1.0.0")

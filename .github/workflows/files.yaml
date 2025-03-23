@@ -11,8 +11,8 @@ jobs:
     # the github action may commit again, to make the push in action refresh pull_request status, add push and ignore it
     runs-on: ubuntu-latest #public
     steps:
-    - name: exit_with_success when push
-      run: exit_with_success
+    - name: exit when push
+      run: exit
       if: github.event_name == 'push'
     - uses: actions/checkout@main
       with:

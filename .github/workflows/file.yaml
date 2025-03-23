@@ -45,6 +45,7 @@ jobs:
           -Dm4_release="$(curl -L https://api.github.com/repos/riku-ri/libyaml.scm/releases | jq '.[].name' | xargs -I__ echo "(release __)")" \
         <.libyaml.scm.release-info.m4 | tee libyaml.scm.release-info
         test -s libyaml.scm.release-info
+    - run: git status
     - name: diff and push
       run: |
         git config user.name "run#${{ github.run_id }}"

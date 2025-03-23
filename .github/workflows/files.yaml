@@ -12,7 +12,7 @@ jobs:
       with:
         ref: ${{ github.head_ref }} # in pull_request, github action is in a detached HEAD, here checkout the real branch
         submodules: recursive
-    - run: sudo apt update && sudo apt install -y clang libclang-dev autoconf m4
+    - run: sudo apt update && sudo apt install -y clang libclang-dev autoconf m4 jq
     #- run: find /usr/lib/llvm-* -type d -name clang-c
     #- run: find /usr/lib/llvm-* -name libclang.so
     - name: foreign.scm
@@ -39,6 +39,12 @@ jobs:
           -Dm4_name="${{ github.event.pull_request.base.repo.owner.login }}" \
         <.LICENSE.m4 | tee LICENSE
         test -s LICENSE
+    - uses: yakubique/github-releases@v1.2
+      id: get_releases
+      with:
+        repository: riku-ri/libyaml.scm
+    - run: |
+        echo "${{ steps.get_releases.outputs.releases }}"
     - name: diff and push
       run: |
         git config user.name ${{ github.actor }}

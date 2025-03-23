@@ -1,6 +1,5 @@
 on:
   push:
-  pull_request:
 permissions:
   contents: write
 #env:
@@ -47,7 +46,6 @@ jobs:
         <.libyaml.scm.release-info.m4 | tee libyaml.scm.release-info
         test -s libyaml.scm.release-info
     - name: diff and push
-      if: github.event_name == 'pull_request'
       run: |
         git config user.name "run#${{ github.run_id }}"
         git config user.email "run#${{ github.run_id }}@action.github.com"
@@ -58,3 +56,10 @@ jobs:
         git add libyaml.scm.release-info
         git diff-index --quiet HEAD || git commit -m '[auto][from github action][include/foreign.scm]'
         git push
+    - name: set success after auto push
+      run: |
+        curl -X POST \
+          -H "Authorization: token $GH_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/repos/${{ github.repository }}/statuses/${{ steps.commit.outputs.sha }}" \
+          -d '{"state":"success","context":"ci/checks"}'

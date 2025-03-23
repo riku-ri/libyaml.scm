@@ -1,6 +1,5 @@
 on:
   pull_request:
-  push: # the github action may commit again, to make the push in action refresh pull_request status, add push and ignore it
 permissions:
   contents: write
 #env:
@@ -47,9 +46,8 @@ jobs:
         <.libyaml.scm.release-info.m4 | tee libyaml.scm.release-info
         test -s libyaml.scm.release-info
     - name: diff and push
-      if: github.event_name == 'pull_request' # the github action may commit again, to make the push in action refresh pull_request status, add push and ignore it
       run: |
-        git config user.name ${{ github.actor }}
+        git config user.name "run#${{ github.run_id }}"
         git config user.email ""
         git add include/foreign.scm
         git add include/config.h

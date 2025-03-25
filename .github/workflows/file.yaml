@@ -55,7 +55,7 @@ jobs:
         <.libyaml.release-info.m4 | tee libyaml.release-info
         test -s libyaml.release-info
     - run: git status
-    - run: git diff .
+    #- run: git diff .
     #- name: diff and push
     #  run: |
     #    git config user.name "run#${{ github.run_id }}"
@@ -78,8 +78,9 @@ jobs:
         git commit -m '[auto][from github action][include/foreign.scm]'
         git switch -c "run/${{ github.run_id }}"
         git push -u origin $(git branch --show-current)
+    - name: gh pr
         echo "${{ secrets.AUTO_PUSH }}" | gh auth login -p https --with-token
-        gh pr new -B main -b -t '[auto][from github action][include/foreign.scm]'
+        gh pr new -B main -b '' -t '[auto][from github action][include/foreign.scm]'
         gh pr merge -d --auto -s
     - name: logout
       run: gh auth logout

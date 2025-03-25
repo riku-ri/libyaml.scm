@@ -79,6 +79,7 @@ jobs:
         git switch -c "run/${{ github.run_id }}"
         git push -u origin $(git branch --show-current)
     - name: gh pr
+      run: |
         echo "${{ secrets.AUTO_PUSH }}" | gh auth login -p https --with-token
         gh pr new -B main -b '' -t '[auto][from github action][include/foreign.scm]'
         gh pr merge -d --auto -s

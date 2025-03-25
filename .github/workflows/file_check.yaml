@@ -39,7 +39,7 @@ jobs:
     - name: libyaml.release-info
       run: |
         m4 -P \
-          -Dm4_release="$(curl -L https://api.github.com/repos/riku-ri/libyaml.scm/releases | jq '.[].name' | xargs -I__ echo "(release __)")" \
+          -Dm4_release="$(curl -L https://api.github.com/repos/riku-ri/libyaml.scm/releases | jq '.[].name' | xargs -n1 cut -b2- | xargs -I__ echo "(release \"__\")")" \
         <.libyaml.release-info.m4 | tee libyaml.release-info
         test -s libyaml.release-info
     - run: git status
@@ -50,5 +50,5 @@ jobs:
         git add libyaml.egg
         git add LICENSE
         git add libyaml.release-info
+        git diff HEAD
         git diff-index HEAD
-        git diff-index --quiet HEAD

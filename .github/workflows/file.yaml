@@ -71,8 +71,8 @@ jobs:
       continue-on-error: true
     - name: gh auth login
       run: |
-        test -n "${{ secrets.GITHUB_TOKEN }}"
-        echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login -p https --with-token
+        test -n "${{ secrets.AUTO_PUSH }}"
+        echo "${{ secrets.AUTO_PUSH }}" | gh auth login -p https --with-token
     - name: push
       if: steps.diff.outcome != 'success'
       run: |

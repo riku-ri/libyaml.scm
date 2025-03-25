@@ -65,7 +65,10 @@ jobs:
     - run: git diff-index HEAD
       id: diff
       continue-on-error: true
-    - run: echo "${{ secrets.AUTO_PUSH }}" | gh auth login -p https --with-token
+    - name: gh auth login
+      run: |
+        test -n "${{ secrets.GITHUB_TOKEN }}"
+        echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login -p https --with-token
     - name: push
       if: steps.diff.outcome != 'success'
       run: |

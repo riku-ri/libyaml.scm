@@ -83,4 +83,4 @@ jobs:
         gh pr merge -d --auto -s
     - name: logout
       run: gh auth logout
-      if: always
+      if: always()

@@ -62,7 +62,6 @@ jobs:
         git add libyaml.egg
         git add LICENSE
         git add libyaml.release-info
-        git commit -m "[auto][github action][run#${{ github.run_id }}]"
     - run: git diff-index HEAD
       id: diff
       continue-on-error: true
@@ -70,6 +69,7 @@ jobs:
       if: always()
     - name: push
       run: |
+        git commit -m "[auto][github action][run#${{ github.run_id }}]"
         git switch -c "run/${{ github.run_id }}"
         git push -u origin $(git branch --show-current)
     - name: gh pr

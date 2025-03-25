@@ -62,6 +62,8 @@ jobs:
         git add libyaml.egg
         git add LICENSE
         git add libyaml.release-info
+    - run: git status
+    - run: git diff HEAD
     - run: git diff-index HEAD
       id: diff
       continue-on-error: true

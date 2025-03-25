@@ -65,6 +65,7 @@ jobs:
     - run: git status
     - run: git diff HEAD
     - run: git diff-index HEAD
+    - run: git diff-index --quiet HEAD
       id: diff
       continue-on-error: true
     - name: gh auth login

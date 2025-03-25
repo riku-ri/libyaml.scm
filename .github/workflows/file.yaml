@@ -2,6 +2,7 @@ on:
   push:
 permissions:
   contents: write
+  pull-requests: write
 #env:
 #  GITHUB_CONTEX: ${{ toJson(github) }}
 jobs:

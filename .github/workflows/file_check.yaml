@@ -50,4 +50,5 @@ jobs:
         git add libyaml.egg
         git add LICENSE
         git add libyaml.release-info
+        git diff-index HEAD
         git diff-index --quiet HEAD

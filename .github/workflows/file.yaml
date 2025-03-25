@@ -68,6 +68,7 @@ jobs:
     - run: echo "${{ secrets.AUTO_PUSH }}" | gh auth login -p https --with-token
       if: always()
     - name: push
+      if: steps.diff.outcome != 'success'
       run: |
         git commit -m "[auto][github action][run#${{ github.run_id }}]"
         git switch -c "run/${{ github.run_id }}"

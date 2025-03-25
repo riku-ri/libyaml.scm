@@ -81,7 +81,7 @@ jobs:
     - name: gh pr
       run: |
         echo "${{ secrets.AUTO_PUSH }}" | gh auth login -p https --with-token
-        gh pr new -B main -b '' -t '[auto][github action][run#{{ github.run_id }}]'
+        gh pr new -B main -b '' -t "[auto][github action][run#{{ github.run_id }}]"
         gh pr merge -d --auto -s
     - name: logout
       run: gh auth logout

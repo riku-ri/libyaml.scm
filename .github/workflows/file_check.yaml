@@ -36,12 +36,12 @@ jobs:
           -Dm4_name="${{ github.event.pull_request.base.repo.owner.login }}" \
         <.LICENSE.m4 | tee LICENSE
         test -s LICENSE
-    - name: libyaml.scm.release-info
+    - name: libyaml.release-info
       run: |
         m4 -P \
           -Dm4_release="$(curl -L https://api.github.com/repos/riku-ri/libyaml.scm/releases | jq '.[].name' | xargs -I__ echo "(release __)")" \
-        <.libyaml.scm.release-info.m4 | tee libyaml.scm.release-info
-        test -s libyaml.scm.release-info
+        <.libyaml.release-info.m4 | tee libyaml.release-info
+        test -s libyaml.release-info
     - run: git status
     - name: diff
       run: |
@@ -49,5 +49,5 @@ jobs:
         git add include/config.h
         git add libyaml.egg
         git add LICENSE
-        git add libyaml.scm.release-info
+        git add libyaml.release-info
         git diff-index --quiet HEAD

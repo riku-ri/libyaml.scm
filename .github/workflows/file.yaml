@@ -69,21 +69,21 @@ jobs:
     - run: git diff-index --quiet HEAD
       id: diff
       continue-on-error: true
-    - name: gh auth login
-      run: |
-        test -n "${{ secrets.AUTO_PUSH }}"
-        echo "${{ secrets.AUTO_PUSH }}" | gh auth login -p https --with-token
+    #- name: gh auth login
+    #  run: |
+    #    test -n "${{ secrets.AUTO_PUSH }}"
+    #    echo "${{ secrets.AUTO_PUSH }}" | gh auth login -p https --with-token
     - name: push
       if: steps.diff.outcome != 'success'
       run: |
         git commit -m "[auto][github action][run#${{ github.run_id }}]"
         git switch -c "run/${{ github.run_id }}"
         git push -u origin $(git branch --show-current)
-    - name: gh pr
-      if: steps.diff.outcome != 'success'
-      run: |
-        gh pr new -B main -b '' -t "[auto][github action][run#${{ github.run_id }}]"
-        gh pr merge -d --auto -s
-    - run: gh auth logout
-      if: always()
-      continue-on-error: true
+    #- name: gh pr
+    #  if: steps.diff.outcome != 'success'
+    #  run: |
+    #    gh pr new -B main -b '' -t "[auto][github action][run#${{ github.run_id }}]"
+    #    gh pr merge -d --auto -s
+    #- run: gh auth logout
+    #  if: always()
+    #  continue-on-error: true

@@ -108,53 +108,11 @@ definitions
 	}
 	else if(clang_getCursorKind(cursor)==CXCursor_FunctionDecl)
 	{
-		CXType type = clang_getCursorResultType(cursor);
-		CXType endpoint = clang_getTypedefDeclUnderlyingType(
-			clang_getTypeDeclaration(type)
-		);
-		CXType truetype = endpoint.kind==CXType_Invalid ? type : endpoint;
-		if(_is(CXCursor_StructDecl , type) || _is(CXCursor_UnionDecl , type))
-		{
-			raii_t<CXString> cxtype = clang_getTypeSpelling(type);
-			fprintf(stderr , "[ERROR] struct/union type [%s] is not supported\n" ,
-				clang_getCString(cxtype)
-			);
-			abort();
-		}
-		std::string typestring = clang_getCString((raii_t<CXString>)clang_getTypeSpelling(truetype));
-		std::string maybe_size_t_str = clang_getCString((raii_t<CXString>)clang_getTypeSpelling(type));
-		if(maybe_size_t_str=="size_t") typestring = "size_t";
-		if(truetype.kind==CXType_Pointer)
-		{
-			CXType endpoint = clang_getTypedefDeclUnderlyingType(
-				clang_getTypeDeclaration(clang_getPointeeType(truetype))
-			);
-			CXType truepoint = endpoint.kind==CXType_Invalid ? clang_getPointeeType(truetype) : endpoint;
-			if(0);
-			else if(truepoint.kind==CXType_Char_U) typestring = "c-string";
-			else if(truepoint.kind==CXType_UChar) typestring = "c-string";
-			else if(truepoint.kind==CXType_Char_S) typestring = "c-string";
-			else if(truepoint.kind==CXType_SChar) typestring = "c-string";
-			else if(truepoint.kind==CXType_WChar) typestring = "c-string";
-			else typestring = "c-pointer";
-		}
-		else if(_is(CXCursor_EnumDecl , type)) typestring = "int";
-		std::string replace_whitespace = typestring;
-		for(int i=0; (i = replace_whitespace.find(' ' , i)) != std::string::npos ; replace_whitespace.replace(i,1,"-"));
-		printf("(define %s (foreign-lambda %s \"%s\"" ,
-			clang_getCString(cxstring) ,
-			replace_whitespace.c_str() ,
-			clang_getCString(cxstring)
-		);
-
-		for(int i=0 ; i<clang_Cursor_getNumArguments(cursor) ; i++)
-		{
-			CXType type = clang_getCursorType(clang_Cursor_getArgument(cursor , i));
+		auto typestring = [](const CXType type) -> std::string {
 			CXType endpoint = clang_getTypedefDeclUnderlyingType(
 				clang_getTypeDeclaration(type)
 			);
 			CXType truetype = endpoint.kind==CXType_Invalid ? type : endpoint;
-			raii_t<CXString> cxtruetype = clang_getTypeSpelling(truetype);
 			if(_is(CXCursor_StructDecl , type) || _is(CXCursor_UnionDecl , type))
 			{
 				raii_t<CXString> cxtype = clang_getTypeSpelling(type);
@@ -183,7 +141,17 @@ definitions
 			else if(_is(CXCursor_EnumDecl , type)) typestring = "int";
 			std::string replace_whitespace = typestring;
 			for(int i=0; (i = replace_whitespace.find(' ' , i)) != std::string::npos ; replace_whitespace.replace(i,1,"-"));
-			printf("\n\t%s" , replace_whitespace.c_str());
+			return replace_whitespace;
+		};
+		printf("(define %s (foreign-lambda %s \"%s\"" ,
+			clang_getCString(cxstring) ,
+			typestring(clang_getCursorResultType(cursor)).c_str() ,
+			clang_getCString(cxstring)
+		);
+
+		for(int i=0 ; i<clang_Cursor_getNumArguments(cursor) ; i++)
+		{
+			printf("\n\t%s" , typestring(clang_getCursorType(clang_Cursor_getArgument(cursor , i))).c_str());
 		}
 		printf("))\n");
 		return CXChildVisit_Continue;

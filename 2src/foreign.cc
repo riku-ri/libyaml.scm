@@ -149,8 +149,7 @@ definitions
 
 		for(int i=0 ; i<clang_Cursor_getNumArguments(cursor) ; i++)
 		{
-			CXCursor _cursor = clang_Cursor_getArgument(cursor , i);
-			CXType type = clang_getCursorType(_cursor);
+			CXType type = clang_getCursorType(clang_Cursor_getArgument(cursor , i));
 			CXType endpoint = clang_getTypedefDeclUnderlyingType(
 				clang_getTypeDeclaration(type)
 			);

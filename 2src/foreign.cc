@@ -16,6 +16,7 @@ extern enum CXChildVisitResult definitions
 );
 
 template<typename _t> class raii_t {};
+template<typename _t> class more_t {};
 
 template<>
 class raii_t<CXString> : public CXString
@@ -24,6 +25,29 @@ class raii_t<CXString> : public CXString
 		raii_t<CXString>(const CXString & cxstring) : CXString(cxstring) {}
 		raii_t<CXString>(const CXString && cxstring) : CXString(cxstring) {}
 		~raii_t<CXString>() {clang_disposeString((CXString)(*this));}
+};
+template<>
+class more_t<CXType> : public CXType
+{
+	public:
+		more_t<CXType>(const CXType & cxtype) : CXType(cxtype) {}
+		more_t<CXType>(const CXType && cxtype) : CXType(cxtype) {}
+		int operator==(const enum CXCursorKind cxcursorkind) const
+		{
+			CXType cxtype = (CXType)*this;
+			enum CXCursorKind typekind = clang_getCursorKind(clang_getTypeDeclaration(cxtype));
+			CXType truetype = clang_getTypedefDeclUnderlyingType(
+				clang_getTypeDeclaration(cxtype)
+			);
+			enum CXCursorKind truetypekind = clang_getCursorKind(
+				clang_getTypeDeclaration(truetype)
+			);
+			if(typekind==cxcursorkind || truetypekind==cxcursorkind)
+			{
+				return (!0);
+			}
+			return 0;
+		}
 };
 
 const char * header[] = {
@@ -57,22 +81,6 @@ main(int argc , char * argv[])
 	return 0;
 }
 
-static int _is(enum CXCursorKind cxcursorkind , CXType cxtype)
-{
-	enum CXCursorKind typekind = clang_getCursorKind(clang_getTypeDeclaration(cxtype));
-	CXType truetype = clang_getTypedefDeclUnderlyingType(
-		clang_getTypeDeclaration(cxtype)
-	);
-	enum CXCursorKind truetypekind = clang_getCursorKind(
-		clang_getTypeDeclaration(truetype)
-	);
-	if(typekind==cxcursorkind || truetypekind==cxcursorkind)
-	{
-		return (!0);
-	}
-	return 0;
-}
-
 enum CXChildVisitResult
 definitions
 (
@@ -98,7 +106,7 @@ definitions
 	else if(clang_getCursorKind(cursor)==CXCursor_TypedefDecl)
 	{
 		/* XXX enum may be anonymous, export enum type string is not always valid */
-		//CXType cxtype = clang_getTypedefDeclUnderlyingType(cursor);
+		//more_t<CXType> cxtype = clang_getTypedefDeclUnderlyingType(cursor);
 		//enum CXCursorKind typekind = clang_getCursorKind(clang_getTypeDeclaration(cxtype));
 		//raii_t<CXString> cxtype = clang_getTypeSpelling(cxtype);
 		//if(typekind==CXCursor_EnumDecl)
@@ -108,12 +116,13 @@ definitions
 	}
 	else if(clang_getCursorKind(cursor)==CXCursor_FunctionDecl)
 	{
-		auto typestring = [](const CXType type) -> std::string {
-			CXType endpoint = clang_getTypedefDeclUnderlyingType(
+		auto typestring = [](const more_t<CXType> type) -> std::string {
+			/* it is not recommended to define converting type to string in more_t<CXType> body */
+			more_t<CXType> endpoint = clang_getTypedefDeclUnderlyingType(
 				clang_getTypeDeclaration(type)
 			);
-			CXType truetype = endpoint.kind==CXType_Invalid ? type : endpoint;
-			if(_is(CXCursor_StructDecl , type) || _is(CXCursor_UnionDecl , type))
+			more_t<CXType> truetype = endpoint.kind==CXType_Invalid ? type : endpoint;
+			if(type==CXCursor_StructDecl || type==CXCursor_UnionDecl)
 			{
 				raii_t<CXString> cxtype = clang_getTypeSpelling(type);
 				fprintf(stderr , "[ERROR] struct/union type [%s] is not supported\n" ,
@@ -126,10 +135,10 @@ definitions
 			if(maybe_size_t_str=="size_t") typestring = "size_t";
 			if(truetype.kind==CXType_Pointer)
 			{
-				CXType endpoint = clang_getTypedefDeclUnderlyingType(
+				more_t<CXType> endpoint = clang_getTypedefDeclUnderlyingType(
 					clang_getTypeDeclaration(clang_getPointeeType(truetype))
 				);
-				CXType truepoint = endpoint.kind==CXType_Invalid ? clang_getPointeeType(truetype) : endpoint;
+				more_t<CXType> truepoint = endpoint.kind==CXType_Invalid ? clang_getPointeeType(truetype) : endpoint;
 				if(0);
 				else if(truepoint.kind==CXType_Char_U) typestring = "c-string";
 				else if(truepoint.kind==CXType_UChar) typestring = "c-string";
@@ -138,7 +147,7 @@ definitions
 				else if(truepoint.kind==CXType_WChar) typestring = "c-string";
 				else typestring = "c-pointer";
 			}
-			else if(_is(CXCursor_EnumDecl , type)) typestring = "int";
+			else if(type==CXCursor_EnumDecl) typestring = "int";
 			std::string replace_whitespace = typestring;
 			for(int i=0; (i = replace_whitespace.find(' ' , i)) != std::string::npos ; replace_whitespace.replace(i,1,"-"));
 			return replace_whitespace;

@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <clang-c/Index.h>
 
+#include <string>
+#include <iostream>
+
 #define MAX_strlen 0x100
 
 extern enum CXChildVisitResult definitions
@@ -12,7 +15,17 @@ extern enum CXChildVisitResult definitions
 	CXClientData client_data
 );
 
-char * header[] = {
+template<typename _t> class raii_t {};
+
+template<>
+class raii_t<CXString> : public CXString
+{
+	public:
+		raii_t<CXString>(const CXString & cxstring) : CXString(cxstring) {}
+		~raii_t<CXString>() {clang_disposeString((CXString)(*this));}
+};
+
+const char * header[] = {
 "(import (chicken foreign))" ,
 "(foreign-declare \"#include <yaml.h>\")"
 };
@@ -67,17 +80,15 @@ definitions
 	void * client_data
 )
 {
-	CXString cxstring = clang_getCursorSpelling(cursor);
+	raii_t<CXString> cxstring = clang_getCursorSpelling(cursor);
 	//printf("%d\n" , clang_getCursorKind(cursor));
 	CXSourceLocation location = clang_getCursorLocation(cursor);
 	CXFile file;
 	unsigned line , column , offset;
 	clang_getSpellingLocation(location , &file , &line , &column , &offset);
-	CXString fname = clang_getFileName(file);
+	raii_t<CXString> fname = clang_getFileName(file);
 	if(!file)
 	{
-		clang_disposeString(fname);
-		clang_disposeString(cxstring);
 		return CXChildVisit_Continue;
 	}
 	const char * fname_p = clang_getCString(fname);
@@ -87,11 +98,8 @@ definitions
 	/* the prefix '/' is required to distinguish from strings like libyaml.h */
 	/* use './yaml.h' if without path */
 	{
-		clang_disposeString(fname);
-		clang_disposeString(cxstring);
 		return CXChildVisit_Continue;
 	}
-	clang_disposeString(fname);
 
 	if(0);
 	else if(clang_getCursorKind(cursor)==CXCursor_TypedefDecl)
@@ -99,8 +107,7 @@ definitions
 		/* XXX enum may be anonymous, export enum type string is not always valid */
 		//CXType cxtype = clang_getTypedefDeclUnderlyingType(cursor);
 		//enum CXCursorKind typekind = clang_getCursorKind(clang_getTypeDeclaration(cxtype));
-		//CXString cxtype = clang_getTypeSpelling(cxtype);
-		//clang_disposeString(cxtype);
+		//raii_t<CXString> cxtype = clang_getTypeSpelling(cxtype);
 		//if(typekind==CXCursor_EnumDecl)
 		//{
 		//	//printf("(define-foreign-type %s int)\n" , clang_getCString(cxstring));
@@ -113,21 +120,18 @@ definitions
 			clang_getTypeDeclaration(type)
 		);
 		CXType truetype = endpoint.kind==CXType_Invalid ? type : endpoint;
-		CXString cxtruetype = clang_getTypeSpelling(truetype);
+		raii_t<CXString> cxtruetype = clang_getTypeSpelling(truetype);
 		if(_is(CXCursor_StructDecl , type) || _is(CXCursor_UnionDecl , type))
 		{
-			CXString cxtype = clang_getTypeSpelling(type);
+			raii_t<CXString> cxtype = clang_getTypeSpelling(type);
 			fprintf(stderr , "[ERROR] struct/union type [%s] is not supported\n" ,
 				clang_getCString(cxtype)
 			);
-			clang_disposeString(cxtype);
-			clang_disposeString(cxstring);
 			abort();
 		}
 		const char * typestring = clang_getCString(cxtruetype);
-		CXString maybe_size_t = clang_getTypeSpelling(type);
+		raii_t<CXString> maybe_size_t = clang_getTypeSpelling(type);
 		if(strcmp("size_t" , clang_getCString(maybe_size_t))==0) typestring = "size_t";
-		clang_disposeString(maybe_size_t);
 		if(truetype.kind==CXType_Pointer)
 		{
 			CXType endpoint = clang_getTypedefDeclUnderlyingType(
@@ -154,7 +158,6 @@ definitions
 			clang_getCString(cxstring)
 		);
 		free(replace_whitespace);
-		clang_disposeString(cxtruetype);
 
 		for(int i=0 ; i<clang_Cursor_getNumArguments(cursor) ; i++)
 		{
@@ -164,21 +167,18 @@ definitions
 				clang_getTypeDeclaration(type)
 			);
 			CXType truetype = endpoint.kind==CXType_Invalid ? type : endpoint;
-			CXString cxtruetype = clang_getTypeSpelling(truetype);
+			raii_t<CXString> cxtruetype = clang_getTypeSpelling(truetype);
 			if(_is(CXCursor_StructDecl , type) || _is(CXCursor_UnionDecl , type))
 			{
-				CXString cxtype = clang_getTypeSpelling(type);
+				raii_t<CXString> cxtype = clang_getTypeSpelling(type);
 				fprintf(stderr , "[ERROR] struct/union type [%s] is not supported\n" ,
 					clang_getCString(cxtype)
 				);
-				clang_disposeString(cxtype);
-				clang_disposeString(cxstring);
 				abort();
 			}
 			const char * typestring = clang_getCString(cxtruetype);
-			CXString maybe_size_t = clang_getTypeSpelling(type);
+			raii_t<CXString> maybe_size_t = clang_getTypeSpelling(type);
 			if(strcmp("size_t" , clang_getCString(maybe_size_t))==0) typestring = "size_t";
-			clang_disposeString(maybe_size_t);
 			if(truetype.kind==CXType_Pointer)
 			{
 				CXType endpoint = clang_getTypedefDeclUnderlyingType(
@@ -201,10 +201,8 @@ definitions
 			while(++*r) if(*r==' ') *r = '-' ;
 			printf("\n\t%s" , replace_whitespace);
 			free(replace_whitespace);
-			clang_disposeString(cxtruetype);
 		}
 		printf("))\n");
-		clang_disposeString(cxstring);
 		return CXChildVisit_Continue;
 	}
 	else if(clang_getCursorKind(cursor)==CXCursor_EnumDecl)
@@ -220,12 +218,11 @@ definitions
 		//enum_string[strlen(enum_string)-1] = 't';
 		//printf("(define-foreign-type %s int)\n" , enum_string);
 		//free(enum_string);
-		//clang_disposeString(cxstring);
 		return CXChildVisit_Recurse;
 	}
 	else if(clang_getCursorKind(cursor)==CXCursor_EnumConstantDecl)
 	{
-		CXString cxparent = clang_getCursorSpelling(parent);
+		raii_t<CXString> cxparent = clang_getCursorSpelling(parent);
 		printf(
 			"(define %s (foreign-value \"(%s)\" %s))\n"
 			//"(define >%s< (cons (cons %s (quote %s)) >%s<))\n"
@@ -239,10 +236,7 @@ definitions
 			//clang_getCString(cxstring) ,
 			//clang_getCString(cxparent)
 		);
-		clang_disposeString(cxstring);
-		clang_disposeString(cxparent);
 		return CXChildVisit_Continue;
 	}
-	clang_disposeString(cxstring);
 	return CXChildVisit_Continue;
 }

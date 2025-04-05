@@ -22,6 +22,7 @@ class raii_t<CXString> : public CXString
 {
 	public:
 		raii_t<CXString>(const CXString & cxstring) : CXString(cxstring) {}
+		raii_t<CXString>(const CXString && cxstring) : CXString(cxstring) {}
 		~raii_t<CXString>() {clang_disposeString((CXString)(*this));}
 };
 
@@ -86,20 +87,12 @@ definitions
 	CXFile file;
 	unsigned line , column , offset;
 	clang_getSpellingLocation(location , &file , &line , &column , &offset);
-	raii_t<CXString> fname = clang_getFileName(file);
-	if(!file)
-	{
-		return CXChildVisit_Continue;
-	}
-	const char * fname_p = clang_getCString(fname);
-	while(*++fname_p);
-	for(int i=0 ; i<sizeof("yaml.h") ; i++) fname_p--;
-	if(strncmp(fname_p , "/yaml.h" , sizeof("yaml.h"))!=0)
+	if(!file) return CXChildVisit_Continue;
+	std::string fname = clang_getCString((raii_t<CXString>)clang_getFileName(file));
+	if(fname.find('/')==std::string::npos || fname.substr(fname.rfind('/'))!="/yaml.h")
 	/* the prefix '/' is required to distinguish from strings like libyaml.h */
 	/* use './yaml.h' if without path */
-	{
 		return CXChildVisit_Continue;
-	}
 
 	if(0);
 	else if(clang_getCursorKind(cursor)==CXCursor_TypedefDecl)
@@ -120,7 +113,6 @@ definitions
 			clang_getTypeDeclaration(type)
 		);
 		CXType truetype = endpoint.kind==CXType_Invalid ? type : endpoint;
-		raii_t<CXString> cxtruetype = clang_getTypeSpelling(truetype);
 		if(_is(CXCursor_StructDecl , type) || _is(CXCursor_UnionDecl , type))
 		{
 			raii_t<CXString> cxtype = clang_getTypeSpelling(type);
@@ -129,9 +121,9 @@ definitions
 			);
 			abort();
 		}
-		const char * typestring = clang_getCString(cxtruetype);
-		raii_t<CXString> maybe_size_t = clang_getTypeSpelling(type);
-		if(strcmp("size_t" , clang_getCString(maybe_size_t))==0) typestring = "size_t";
+		std::string typestring = clang_getCString((raii_t<CXString>)clang_getTypeSpelling(truetype));
+		std::string maybe_size_t_str = clang_getCString((raii_t<CXString>)clang_getTypeSpelling(type));
+		if(maybe_size_t_str=="size_t") typestring = "size_t";
 		if(truetype.kind==CXType_Pointer)
 		{
 			CXType endpoint = clang_getTypedefDeclUnderlyingType(
@@ -147,17 +139,13 @@ definitions
 			else typestring = "c-pointer";
 		}
 		else if(_is(CXCursor_EnumDecl , type)) typestring = "int";
-		char * replace_whitespace = (char*)malloc(strnlen(typestring , MAX_strlen) + 1);
-		memset(replace_whitespace , 0 , strnlen(typestring , MAX_strlen) + 1);
-		strncpy(replace_whitespace , typestring , strnlen(typestring , MAX_strlen));
-		char * r = replace_whitespace; r--;
-		while(++*r) if(*r==' ') *r = '-' ;
+		std::string replace_whitespace = typestring;
+		for(int i=0; (i = replace_whitespace.find(' ' , i)) != std::string::npos ; replace_whitespace.replace(i,1,"-"));
 		printf("(define %s (foreign-lambda %s \"%s\"" ,
 			clang_getCString(cxstring) ,
-			replace_whitespace ,
+			replace_whitespace.c_str() ,
 			clang_getCString(cxstring)
 		);
-		free(replace_whitespace);
 
 		for(int i=0 ; i<clang_Cursor_getNumArguments(cursor) ; i++)
 		{
@@ -176,9 +164,9 @@ definitions
 				);
 				abort();
 			}
-			const char * typestring = clang_getCString(cxtruetype);
-			raii_t<CXString> maybe_size_t = clang_getTypeSpelling(type);
-			if(strcmp("size_t" , clang_getCString(maybe_size_t))==0) typestring = "size_t";
+			std::string typestring = clang_getCString((raii_t<CXString>)clang_getTypeSpelling(truetype));
+			std::string maybe_size_t_str = clang_getCString((raii_t<CXString>)clang_getTypeSpelling(type));
+			if(maybe_size_t_str=="size_t") typestring = "size_t";
 			if(truetype.kind==CXType_Pointer)
 			{
 				CXType endpoint = clang_getTypedefDeclUnderlyingType(
@@ -194,13 +182,9 @@ definitions
 				else typestring = "c-pointer";
 			}
 			else if(_is(CXCursor_EnumDecl , type)) typestring = "int";
-			char * replace_whitespace = (char*)malloc(strnlen(typestring , MAX_strlen) + 1);
-			memset(replace_whitespace , 0 , strnlen(typestring , MAX_strlen) + 1);
-			strncpy(replace_whitespace , typestring , strnlen(typestring , MAX_strlen));
-			char * r = replace_whitespace; r--;
-			while(++*r) if(*r==' ') *r = '-' ;
-			printf("\n\t%s" , replace_whitespace);
-			free(replace_whitespace);
+			std::string replace_whitespace = typestring;
+			for(int i=0; (i = replace_whitespace.find(' ' , i)) != std::string::npos ; replace_whitespace.replace(i,1,"-"));
+			printf("\n\t%s" , replace_whitespace.c_str());
 		}
 		printf("))\n");
 		return CXChildVisit_Continue;
@@ -214,7 +198,7 @@ definitions
 		//	clang_getCString(cxstring) ,
 		//	clang_getCString(cxstring)
 		//);
-		//char * enum_string = strdup(clang_getCString(cxstring));
+		//std::string enum_string = clang_getCString(cxstring);
 		//enum_string[strlen(enum_string)-1] = 't';
 		//printf("(define-foreign-type %s int)\n" , enum_string);
 		//free(enum_string);

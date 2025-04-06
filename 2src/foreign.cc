@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <clang-c/Index.h>
 
+#include <memory>
 #include <string>
 #include <iostream>
 
@@ -15,23 +16,14 @@ extern enum CXChildVisitResult c2scm
 	CXClientData client_data
 );
 
-template<typename _t> class raii_t {};
 template<typename _t> class more_t {};
 
-template<>
-class raii_t<CXString> : public CXString
-{
-	public:
-		raii_t<CXString>(const CXString & cxstring) : CXString(cxstring) {}
-		raii_t<CXString>(const CXString && cxstring) : CXString(cxstring) {}
-		~raii_t<CXString>() {clang_disposeString((CXString)(*this));}
-};
 template<>
 class more_t<CXType> : public CXType
 {
 	public:
-		more_t<CXType>(const CXType & cxtype) : CXType(cxtype) {}
-		more_t<CXType>(const CXType && cxtype) : CXType(cxtype) {}
+		more_t(const CXType & cxtype) : CXType(cxtype) {}
+		more_t(const CXType && cxtype) : CXType(cxtype) {}
 		int operator==(const enum CXCursorKind cxcursorkind) const
 		{
 			CXType cxtype = (CXType)*this;
@@ -50,6 +42,21 @@ class more_t<CXType> : public CXType
 		}
 };
 
+template<typename _t> class free_t {};
+template<typename _t>
+class raii_t : public _t
+{
+	public:
+		raii_t(const _t & _) : _t(_) {}
+		raii_t(const _t && _) : _t(_) {}
+		~raii_t() {free_t<_t>(*this);}
+};
+template<>class free_t<CXString> {public:free_t( CXString &_){clang_disposeString(_);}};
+template<>class free_t<std::shared_ptr<CXIndex>>
+	{public:free_t( std::shared_ptr<CXIndex> &_){clang_disposeIndex(*_);}};
+template<>class free_t<std::shared_ptr<CXTranslationUnit>>
+	{public:free_t( std::shared_ptr<CXTranslationUnit> &_){clang_disposeTranslationUnit(*_);}};
+
 const char * header[] = {
 "(import (chicken foreign))" ,
 "(foreign-declare \"#include <yaml.h>\")"
@@ -59,22 +66,24 @@ int
 main(int argc , char * argv[])
 {
 	if(argc <= 0) exit(0);
-	CXIndex clang_index = clang_createIndex(0 , 0);
+	raii_t<std::shared_ptr<CXIndex>>
+		clang_index_p = std::make_shared<CXIndex>(clang_createIndex(0 , 0));
 	for(size_t i=0 ; i<sizeof(header)/sizeof(*header) ; i++) printf("%s\n" , header[i]);
 	const char * args[] = {"-I."};
-	CXTranslationUnit clang_tran_unit = clang_parseTranslationUnit
-	(
-		clang_index ,
-		argv[1] ,
-		args ,
-		sizeof(args)/sizeof(*args) ,
-		NULL ,
-		0 ,
-		CXTranslationUnit_None
-	);
+	raii_t<std::shared_ptr<CXTranslationUnit>>
+		clang_tran_unit_p = std::make_shared<CXTranslationUnit>(clang_parseTranslationUnit
+		(
+			*clang_index_p ,
+			argv[1] ,
+			args ,
+			sizeof(args)/sizeof(*args) ,
+			NULL ,
+			0 ,
+			CXTranslationUnit_None
+		));
 	clang_visitChildren
 	(
-		clang_getTranslationUnitCursor(clang_tran_unit) ,
+		clang_getTranslationUnitCursor(*clang_tran_unit_p) ,
 		c2scm ,
 		NULL
 	);

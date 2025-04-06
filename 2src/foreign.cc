@@ -26,7 +26,7 @@ class more_t<CXType> : public CXType
 		more_t(const CXType && cxtype) : CXType(cxtype) {}
 		int operator==(const enum CXCursorKind cxcursorkind) const
 		{
-			CXType cxtype = (CXType)*this;
+			CXType cxtype = *this;
 			enum CXCursorKind typekind = clang_getCursorKind(clang_getTypeDeclaration(cxtype));
 			CXType truetype = clang_getTypedefDeclUnderlyingType(
 				clang_getTypeDeclaration(cxtype)

@@ -8,7 +8,7 @@
 
 #define MAX_strlen 0x100
 
-extern enum CXChildVisitResult definitions
+extern enum CXChildVisitResult c2scm
 (
 	CXCursor cursor ,
 	CXCursor parent ,
@@ -75,14 +75,14 @@ main(int argc , char * argv[])
 	clang_visitChildren
 	(
 		clang_getTranslationUnitCursor(clang_tran_unit) ,
-		definitions ,
+		c2scm ,
 		NULL
 	);
 	return 0;
 }
 
 enum CXChildVisitResult
-definitions
+c2scm
 (
 	CXCursor cursor ,
 	CXCursor parent ,

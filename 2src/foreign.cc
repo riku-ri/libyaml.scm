@@ -18,13 +18,12 @@ extern enum CXChildVisitResult c2scm
 
 template<typename _t> class more_t {};
 
-template<>
-class more_t<CXType> : public CXType
+template<> class more_t<CXType> : public CXType
 {
 	public:
 		more_t(const CXType & cxtype) : CXType(cxtype) {}
 		more_t(const CXType && cxtype) : CXType(cxtype) {}
-		int operator==(const enum CXCursorKind cxcursorkind) const
+		int operator==(const enum CXCursorKind & cxcursorkind) const
 		{
 			CXType cxtype = *this;
 			enum CXCursorKind typekind = clang_getCursorKind(clang_getTypeDeclaration(cxtype));
@@ -43,8 +42,7 @@ class more_t<CXType> : public CXType
 };
 
 template<typename _t> class free_t {};
-template<typename _t>
-class raii_t : public _t
+template<typename _t> class raii_t : public _t
 {
 	public:
 		raii_t(const _t & _) : _t(_) {}
@@ -62,8 +60,7 @@ const char * header[] = {
 "(foreign-declare \"#include <yaml.h>\")"
 };
 
-int
-main(int argc , char * argv[])
+int main(int argc , char * argv[])
 {
 	if(argc <= 0) exit(0);
 	raii_t<std::shared_ptr<CXIndex>>
@@ -90,8 +87,7 @@ main(int argc , char * argv[])
 	return 0;
 }
 
-enum CXChildVisitResult
-c2scm
+enum CXChildVisitResult c2scm
 (
 	CXCursor cursor ,
 	CXCursor parent ,
@@ -125,7 +121,7 @@ c2scm
 	}
 	else if(clang_getCursorKind(cursor)==CXCursor_FunctionDecl)
 	{
-		auto typestring = [](const more_t<CXType> type) -> std::string {
+		auto typestring = [](const more_t<CXType> & type) -> std::string {
 			/* it is not recommended to define converting type to string in more_t<CXType> body */
 			more_t<CXType> endpoint = clang_getTypedefDeclUnderlyingType(
 				clang_getTypeDeclaration(type)

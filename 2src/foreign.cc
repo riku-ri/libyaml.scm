@@ -68,7 +68,7 @@ main(int argc , char * argv[])
 	if(argc <= 0) exit(0);
 	raii_t<std::shared_ptr<CXIndex>>
 		clang_index_p = std::make_shared<CXIndex>(clang_createIndex(0 , 0));
-	for(size_t i=0 ; i<sizeof(header)/sizeof(*header) ; i++) printf("%s\n" , header[i]);
+	for(auto h : header) printf("%s\n" , h);
 	const char * args[] = {"-I."};
 	raii_t<std::shared_ptr<CXTranslationUnit>>
 		clang_tran_unit_p = std::make_shared<CXTranslationUnit>(clang_parseTranslationUnit

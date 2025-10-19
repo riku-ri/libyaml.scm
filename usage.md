@@ -37,6 +37,12 @@ Functions and enum members can be used in scheme code directly.
 
 #### `SCHEME-YAML-OBJECT`
 
+> As you will seen below,
+> [libyaml.scm<sub>git</sub>](.) define yaml document to vector.
+> Hence **A complete yaml object in scheme is always a vector**.
+> This means if provide a non-vector object as yaml content,
+> like `(yaml<- (list 1 2))` will lead to error.
+
 <table>
 <tr>
 <th>yaml</th>

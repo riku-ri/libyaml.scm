@@ -319,7 +319,7 @@
 				((vector? yaml)
 					(cond
 						((= (vector-length yaml) 0) #())
-						(else (list->vector (map :mapping-ordered-yaml<- (vector->list yaml))))))
+						(else (error (sprintf "non 0 size vector found:~%  ~S" yaml)))))
 				((null? yaml) '())
 				((list? yaml) (map :mapping-ordered-yaml<- yaml))
 				((pair? yaml)
@@ -330,7 +330,7 @@
 					(let ((yaml (yaml)))
 						(:mapping-ordered-yaml<- (sort yaml)))
 					yaml))))
-		(:mapping-ordered-yaml<- yaml)))
+		(list->vector (map :mapping-ordered-yaml<- (vector->list yaml)))))
 
 (define (&in-yaml-mapping? == mapping key)
 	(if (not (procedure? mapping))

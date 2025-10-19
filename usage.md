@@ -36,29 +36,94 @@ Functions and enum members can be used in scheme code directly.
 ```
 
 #### `SCHEME-YAML-OBJECT`
-- yaml content will be parse to a scheme-list of yaml-document,
-	and each document will be a nested structure of them :
-	- yaml-list will be a scheme-list
-		- yaml `[1 , 2]`  
-		=> scheme `(list 1 2)`
-	- yaml-mapping will be a procedure that generate a "association list"
-		- yaml `{key: value}`  
-		=> scheme `(lambda () (list (cons "key" "value")))`
-	- atom data  
-		Atom datas are divided according to the *Tag Resolution section* of
-		[yaml 1.2 spec](https://yaml.org/spec/1.2.2/) :
-		- yaml `null`  
-		=> scheme empty list, *i.e.* `(list)` or `'()`
-		- yaml `true` `false`  
-		=> scheme `#t` `#f`
-		- nunmbers :
-			- yaml `1` `0.5` `0o10` `0x10` `10e1` `3E2`  
-			=> scheme `1` `0.5` `8` `16` `100.0` `300.0`
-			- yaml `+.inf` `-.INF`  
-			=> scheme `+inf.0` `-inf.0`
-			- yaml `.nan`  
-			=> scheme `+nan.0`
-		- others will be treated as literal string, including any date format
+
+<table>
+<tr>
+<th>yaml</th>
+<th>scheme</th>
+<th>yaml <i>e.g.</i></th>
+<th>scheme <i>e.g.</i></th>
+<th>note</th>
+</tr>
+
+<tr>
+<td>null</td>
+<td>empty vector</td>
+<td><code>null</code></td>
+<td><code>#()</code></td>
+<td/>
+</tr>
+
+<tr>
+<td>document</td>
+<td>vector</td>
+<td><pre>--- 2</br>---</br>...</pre></td>
+<td><code>#(2 #())</code></td>
+<td> the empty vector is null</td>
+</tr>
+
+<tr>
+<td>boolean</td>
+<td>boolean</td>
+<td><code>true</code><br/><code>false</code></td>
+<td><code>#t</code><br/><code>#f</code></td>
+<td/>
+</tr>
+
+<tr>
+<td>number</td>
+<td>number</td>
+<td>
+	<code>1</code><br/>
+	<code>0.5</code><br/>
+	<code>0o10</code><br/>
+	<code>0x10</code><br/>
+	<code>10e1</code><br/>
+	<code>3E2</code>
+</td>
+<td>
+	<code>1</code><br/>
+	<code>0.5</code><br/>
+	<code>8</code><br/>
+	<code>16</code><br/>
+	<code>100.0</code><br/>
+	<code>300.0</code>
+</td>
+<td/>
+</tr>
+
+<tr>
+<td>inf</td>
+<td>inf</td>
+<td><code>+.inf</code><br/><code>-.INF</code></td>
+<td><code>+.inf.0</code><br/><code>-.inf.0</code></td>
+<td/>
+</tr>
+
+<tr>
+<td>nan</td>
+<td>nan</td>
+<td><code>.nan</code></td>
+<td><code>+nan.0</code></td>
+<td/>
+</tr>
+
+<tr>
+<td>list</td>
+<td>list</td>
+<td><code>[1 , 2 , 3 , 4, []]</code></td>
+<td><code>#((1 2 3 4 ()))</code></td>
+<td>the top level vector is document</td>
+</tr>
+
+<tr>
+<td>mapping</td>
+<td>A lambda without argument and generate a "association list"</td>
+<td><code>{key: value}</code></td>
+<td><code>(vector (lambda () (list (cons "key" "value"))))</code></td>
+<td>the top level vector is document</td>
+</tr>
+</table>
 
 ##### Examples
 
@@ -74,7 +139,7 @@ string
 will be
 
 ```
-(list (list +nan.0 -inf.0) "string")
+(vector (list +nan.0 -inf.0) "string")
 ```
 
 ---
@@ -92,7 +157,7 @@ g:
 will be
 
 ```lisp
-(list
+(vector
 	(lambda ()
 		(list
 			(cons "a" "b")
@@ -134,7 +199,7 @@ will be
 > For example, after saving above code in a file named `tmp.scm`,
 > call The CHICKEN Scheme interpreter `csi` :  
 > `echo '[a,b,c]' | csi -s tmp.scm`  
-> will print `(("a" "b" "c"))`
+> will print `#(("a" "b" "c"))`
 
 ---
 
@@ -258,20 +323,20 @@ but `in-yaml-mapping??` will compare by `epv?`,
 (set! yaml (yaml<- `(#:input . "{c: d, a: b}")))
 (map print (list
 yaml ; will be a list that only contain 1 procedure (#<procedure>)
-(mapping-ordered-yaml<- yaml) ; --> (((a . b) (c . d)))
+(mapping-ordered-yaml<- yaml) ; --> #(((a . b) (c . d)))
 (procedure? yaml) ; --> #f the top-level is always a list of yaml-document
-(list? (car yaml)) ; --> #f
-(procedure? (car yaml)) ; --> #t this way to check if it is a yaml-mapping
+(list? (vector-ref yaml 0)) ; --> #f
+(procedure? (vector-ref yaml 0)) ; --> #t this way to check if it is a yaml-mapping
 ; (in-yaml-mapping? yaml "a") ; --> ERROR because the top level is always a list but not mapping
-(in-yaml-mapping? (car yaml) "a") ; --> #t
-(in-yaml-mapping? (car yaml) "x") ; --> #f
+(in-yaml-mapping? (vector-ref yaml 0) "a") ; --> #t
+(in-yaml-mapping? (vector-ref yaml 0) "x") ; --> #f
 ))
 
 (set! yaml (yaml<- `(#:input . "[1, 2, -.inf, string]")))
 (map print (list
-yaml ; --> ((1 2 -inf.0 "string"))
-(list? (car yaml)) ; --> #t
-(map number? (car yaml)) ; --> (#t #t #t #f)
+yaml ; --> #((1 2 -inf.0 "string"))
+(list? (vector-ref yaml 0)) ; --> #t
+(map number? (vector-ref yaml 0)) ; --> (#t #t #t #f)
 ))
 ```
 
@@ -329,17 +394,18 @@ Content of `tmp.scm`:
 	)
 )
 
-(let ((yaml (yaml<- `(#:input . ,(open-input-file "tmp.yaml")))))
-	(print (map replace-yaml-document yaml)) ; mapping will not print
-	(print (mapping-ordered-yaml<- (map replace-yaml-document yaml))) ; mapping will be print
+(let ((yaml (vector->list (yaml<- `(#:input . ,(open-input-file "tmp.yaml"))))))
+	(print (list->vector (map replace-yaml-document yaml))) ; mapping will not print
+	(print (mapping-ordered-yaml<- (list->vector (map replace-yaml-document yaml)))) ; mapping will be print
 	(print (make-string 32 #\#))
-	(<-yaml (map replace-yaml-document yaml)) ; print to stdout, generally screen
+	(<-yaml (list->vector (map replace-yaml-document yaml))) ; print to stdout, generally screen
 )
 ```
 
 Output:
 ```
-((#<procedure (?)> #<procedure (?)> HERE (HERE) ignored 3.32 3.32))                                                                                                                            ((((replace me . HERE)) ((a internal mapping (replace me . HERE))) HERE (HERE) ignored 3.32 3.32))
+#((#<procedure (?)> #<procedure (?)> HERE (HERE) ignored 3.32 3.32))
+#((((replace me . HERE)) ((a internal mapping (replace me . HERE))) HERE (HERE) ignored 3.32 3.32))
 ################################
 ---
 - replace me: HERE

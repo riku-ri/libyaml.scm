@@ -93,10 +93,8 @@
 						)
 					)))
 		)
-
 		(memset &parser 0 (foreign-type-size "struct yaml_parser_s"))
 		(memset &event 0 (foreign-type-size "struct yaml_event_s"))
-
 		(let*
 			(
 				(<< (yaml_parser_initialize &parser))
@@ -177,7 +175,7 @@
 								; But yaml-tag will generate an error
 									(cond
 										; Regular expression is from https://yaml.org/spec/1.2.2/
-										((or (= (string-length <<) 0) (irregex-match? "null|Null|NULL|~" <<)) '())
+										((or (= (string-length <<) 0) (irregex-match? "null|Null|NULL|~" <<)) #())
 										((irregex-match? "true|True|TRUE|false|False|FALSE" <<)
 											(let* ((^ (char-downcase (string-ref << 0))))
 												(cond ((char=? ^ #\f) #f) ((char=? ^ #\f) #f) ((char=? ^ #\t) #t))))
@@ -282,7 +280,7 @@
 							mapping))) ; Use (lambda) to distinguish yaml-list and yaml-mapping
 			) ; (cond)
 		)
-		(let ((yaml (:yaml<- (yaml-parser-parse &parser &event)))) yaml)
+		(let ((yaml (:yaml<- (yaml-parser-parse &parser &event)))) (list->vector yaml))
 	) ; let
 )
 
@@ -303,7 +301,6 @@
 				(cdr ?swap-when)
 				(lambda (l r) (string>? (->string (car l)) (->string (car r))))))
 		)
-
 		(define (sort <>)
 			(define (insert ? <>)
 				(define (:insert <l> ? <r>)
@@ -317,9 +314,12 @@
 					((null? todo) done)
 					(else (:sort (cdr todo) (insert (car todo) done)))))
 			(:sort <> '()))
-
 		(define (:mapping-ordered-yaml<- yaml)
 			(cond
+				((vector? yaml)
+					(cond
+						((= (vector-length yaml) 0) #())
+						(else (list->vector (map :mapping-ordered-yaml<- (vector->list yaml))))))
 				((null? yaml) '())
 				((list? yaml) (map :mapping-ordered-yaml<- yaml))
 				((pair? yaml)
@@ -399,9 +399,19 @@
 			(<-* &emitter yaml_document_start_event_initialize &event #f #f #f 0)
 			(define (:<-yaml-in-document yaml)
 				(cond
-					((null? yaml)
-						(<-* &emitter yaml_scalar_event_initialize &event #f #f "~" -1 1 1
-							YAML_PLAIN_SCALAR_STYLE))
+					((vector? yaml)
+						(cond
+							((= (vector-length yaml) 0)
+								(<-* &emitter yaml_scalar_event_initialize
+									&event #f #f "~" -1 1 1 YAML_PLAIN_SCALAR_STYLE))
+							(else
+								(error
+									(string-append
+										"A non 0 size vector was found in:"
+										(sprintf "~%  ~S" yaml))))))
+					;((null? yaml)
+					;	(<-* &emitter yaml_scalar_event_initialize &event #f #f "~" -1 1 1
+					;		YAML_PLAIN_SCALAR_STYLE))
 					((procedure? yaml)
 						(<-* &emitter yaml_mapping_start_event_initialize &event
 							#f #f 0 YAML_BLOCK_MAPPING_STYLE)
@@ -427,7 +437,7 @@
 										(style (cond
 											((< 1 (length (string-split yaml "\n" #t))) YAML_LITERAL_SCALAR_STYLE)
 											(else YAML_PLAIN_SCALAR_STYLE)))
-										(plain_implicit (if (string? (car (yaml<- `(#:input . ,yaml)))) 1 0))
+										(plain_implicit (if (string? (vector-ref (yaml<- `(#:input . ,yaml)) 0)) 1 0))
 									)
 									(<-* &emitter yaml_scalar_event_initialize
 										&event #f #f yaml -1 plain_implicit 1 style)))
@@ -449,7 +459,7 @@
 			(:<-yaml-in-document yaml)
 			(<-* &emitter yaml_document_end_event_initialize &event 0)
 		)
-		(map <-yaml-document yaml) ; XXX if map is parallel, emitter may be undefined
+		(map <-yaml-document (vector->list yaml)) ; XXX if map is parallel, emitter may be undefined
 		(<-* &emitter yaml_stream_end_event_initialize &event)
 		(clear)
 	) ; let

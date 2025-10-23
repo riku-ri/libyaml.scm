@@ -271,11 +271,11 @@ will be
 As definition in *Read yaml file or string* section,
 yaml-mapping will be a procedure that generate a "association list".
 So `print` `display` them will just show a hided procedure but not its content.
-`mapping-ordered-yaml<-` will recursively sort a `SCHEME-YAML-OBJECT` and
+`map-fixed-yaml<-` will recursively sort a `SCHEME-YAML-OBJECT` and
 replace procedure to its result.
 
 ```
-(mapping-ordered-yaml<- SCHEME-YAML-OBJECT [ARGUMENTS])
+(map-fixed-yaml<- SCHEME-YAML-OBJECT [ARGUMENTS])
 ```
 
 Arguments :
@@ -284,18 +284,18 @@ Arguments :
 - `'(#:swap-when . COMPARE)`  
 	The compare procedure for sorting.  
 	This should be a lambda that accept 2 arguments.
-	`mapping-ordered-yaml<-` will apply this lambda to each 2 yaml-mapping keys,
+	`map-fixed-yaml<-` will apply this lambda to each 2 yaml-mapping keys,
 	if this lambda return true, then swap them.  
-	If not set, `mapping-ordered-yaml<-` will sort by scheme function `string>?`  
+	If not set, `map-fixed-yaml<-` will sort by scheme function `string>?`  
 	For example:
 	- For a yaml content `{1: 2, 3: 4}`, `yaml<-` will parse it to `(list (lambda () '((1 . 2) (3 . 4))))`.  
 	If `COMPARE` is `(lambda (l r) (< l r))`,
 	means if the left key(here is `1`) is smaller than the right key(here is `3`),
 	then swap them.  
-	Hence `mapping-ordered-yaml<-` with this `#:swap-when` option will generate
+	Hence `map-fixed-yaml<-` with this `#:swap-when` option will generate
 	`(list '((3 . 4) (1 . 2)))`, swap the key-value pair.
 
-**Note** that the result of `mapping-ordered-yaml<-` is
+**Note** that the result of `map-fixed-yaml<-` is
 **different** from the original `SCHEME-YAML-OBJECT` .
 Because it replace the procedure to list,
 so you cannot distinguish yaml-mapping and yaml-list in it.
@@ -303,23 +303,23 @@ so you cannot distinguish yaml-mapping and yaml-list in it.
 #### Check if a key is in yaml-mapping
 
 ```
-(in-yaml-mapping? MAPPING KEY)
+(in-yaml-map? MAPPING KEY)
 ```
 
-`in-yaml-mapping?` will return `#t` if `KEY` is in `MAPPING`.
+`in-yaml-map?` will return `#t` if `KEY` is in `MAPPING`.
 As definition in *Read yaml file or string* section,
 `MAPPING` should be a procedure that generate a "association list".
 
-`in-yaml-mapping?` will compare by `equal?`
+`in-yaml-map?` will compare by `equal?`
 
 ```
-(in-yaml-mapping?? MAPPING KEY)
-(in-yaml-mapping??? MAPPING KEY)
+(in-yaml-map?? MAPPING KEY)
+(in-yaml-map??? MAPPING KEY)
 ```
 
-Similar to `in-yaml-mapping?`,
-but `in-yaml-mapping??` will compare by `epv?`,
-`in-yaml-mapping???` will compare by `ep?`.
+Similar to `in-yaml-map?`,
+but `in-yaml-map??` will compare by `epv?`,
+`in-yaml-map???` will compare by `ep?`.
 
 ## Examples
 
@@ -329,13 +329,13 @@ but `in-yaml-mapping??` will compare by `epv?`,
 (set! yaml (yaml<- `(#:input . "{c: d, a: b}")))
 (map print (list
 yaml ; will be a list that only contain 1 procedure (#<procedure>)
-(mapping-ordered-yaml<- yaml) ; --> #(((a . b) (c . d)))
+(map-fixed-yaml<- yaml) ; --> #(((a . b) (c . d)))
 (procedure? yaml) ; --> #f the top-level is always a list of yaml-document
 (list? (vector-ref yaml 0)) ; --> #f
 (procedure? (vector-ref yaml 0)) ; --> #t this way to check if it is a yaml-mapping
-; (in-yaml-mapping? yaml "a") ; --> ERROR because the top level is always a list but not mapping
-(in-yaml-mapping? (vector-ref yaml 0) "a") ; --> #t
-(in-yaml-mapping? (vector-ref yaml 0) "x") ; --> #f
+; (in-yaml-map? yaml "a") ; --> ERROR because the top level is always a list but not mapping
+(in-yaml-map? (vector-ref yaml 0) "a") ; --> #t
+(in-yaml-map? (vector-ref yaml 0) "x") ; --> #f
 ))
 
 (set! yaml (yaml<- `(#:input . "[1, 2, -.inf, string]")))
@@ -402,7 +402,7 @@ Content of `tmp.scm`:
 
 (let ((yaml (vector->list (yaml<- `(#:input . ,(open-input-file "tmp.yaml"))))))
 	(print (list->vector (map replace-yaml-document yaml))) ; mapping will not print
-	(print (mapping-ordered-yaml<- (list->vector (map replace-yaml-document yaml)))) ; mapping will be print
+	(print (map-fixed-yaml<- (list->vector (map replace-yaml-document yaml)))) ; mapping will be print
 	(print (make-string 32 #\#))
 	(<-yaml (list->vector (map replace-yaml-document yaml))) ; print to stdout, generally screen
 )

@@ -93,9 +93,9 @@
 				(else
 					(error
 						(string-append
-							"#:input is not a string or input-port"
+							"input is not a string or input-port"
 							", "
-							"also check if the value to #:input is scheme quoted"
+							"also check if the value to input is scheme quoted"
 						)
 					input))
 			))

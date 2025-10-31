@@ -47,3 +47,10 @@
 						(:map-fixed-yaml<- (sort yaml)))
 					yaml))))
 		(list->vector (map :map-fixed-yaml<- (vector->list yaml)))))
+
+;(define (fixed-mapping yaml)
+;	(cond
+;		((list? yaml) (map fixed-mapping yaml))
+;		((pair? yaml) (cons (fixed-mapping (car yaml)) (fixed-mapping (cdr yaml))))
+;		(else (if (procedure? yaml) (fixed-mapping (yaml)) yaml))))
+

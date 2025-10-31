@@ -25,7 +25,7 @@
 (c-object src/libyaml/src/dumper.c (source src/libyaml/src/dumper.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
 (c-object src/libyaml/src/emitter.c (source src/libyaml/src/emitter.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
 (extension libyaml
-(source src/yaml.scm)
+(source src/libyaml.scm)
 (objects
 src/libyaml/src/scanner.c
 src/libyaml/src/reader.c

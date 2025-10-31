@@ -16,14 +16,14 @@
 ;((distribution-files)
 
 (components
-(c-object src/libyaml/src/scanner.c (source src/libyaml/src/scanner.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
-(c-object src/libyaml/src/reader.c (source src/libyaml/src/reader.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
-(c-object src/libyaml/src/api.c (source src/libyaml/src/api.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
-(c-object src/libyaml/src/parser.c (source src/libyaml/src/parser.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
-(c-object src/libyaml/src/writer.c (source src/libyaml/src/writer.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
-(c-object src/libyaml/src/loader.c (source src/libyaml/src/loader.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
-(c-object src/libyaml/src/dumper.c (source src/libyaml/src/dumper.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
-(c-object src/libyaml/src/emitter.c (source src/libyaml/src/emitter.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/."))
+(c-object src/libyaml/src/scanner.c (source src/libyaml/src/scanner.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/include/."))
+(c-object src/libyaml/src/reader.c (source src/libyaml/src/reader.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/include/."))
+(c-object src/libyaml/src/api.c (source src/libyaml/src/api.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/include/."))
+(c-object src/libyaml/src/parser.c (source src/libyaml/src/parser.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/include/."))
+(c-object src/libyaml/src/writer.c (source src/libyaml/src/writer.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/include/."))
+(c-object src/libyaml/src/loader.c (source src/libyaml/src/loader.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/include/."))
+(c-object src/libyaml/src/dumper.c (source src/libyaml/src/dumper.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/include/."))
+(c-object src/libyaml/src/emitter.c (source src/libyaml/src/emitter.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./src/libyaml/include/."))
 (extension libyaml
 (source src/libyaml.scm)
 (objects

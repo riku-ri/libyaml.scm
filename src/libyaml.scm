@@ -21,6 +21,7 @@
 
 (include-relative "include/2yaml.scm")
 (include-relative "include/2map-fixed-yaml.scm")
+(include-relative "include/if-in-yaml-map.scm")
 
 (define (libyaml-argparse <> <without-value> <with-value> before-error)
 	(if (not (list? <>)) (error "argument is not a list" <>))
@@ -48,24 +49,6 @@
 ;		((list? yaml) (map fixed-mapping yaml))
 ;		((pair? yaml) (cons (fixed-mapping (car yaml)) (fixed-mapping (cdr yaml))))
 ;		(else (if (procedure? yaml) (fixed-mapping (yaml)) yaml))))
-
-
-(define (&in-yaml-map? == mapping key)
-	(if (not (procedure? mapping))
-		(error "try to find a key in a non mapping object" mapping))
-	(let ((mapping (mapping)))
-		(if (not (list mapping))
-			(error "try to find a key in a non mapping object" mapping))
-		(define (:&in-yaml-map? mapping)
-			(cond
-				((null? mapping) #f)
-				((not (pair? (car mapping))) (:&in-yaml-map? (cdr mapping)))
-				((== (car (car mapping)) key) (car mapping))
-				(else (:&in-yaml-map? (cdr mapping)))))
-		(:&in-yaml-map? mapping)))
-(define (in-yaml-map? mapping key) (&in-yaml-map? equal? mapping key))
-(define (in-yaml-map?? mapping key) (&in-yaml-map? eqv? mapping key))
-(define (in-yaml-map??? mapping key) (&in-yaml-map? eq? mapping key))
 
 (define (<-yaml . yaml><)
 	(if (null? yaml><) (error "no yaml provided"))

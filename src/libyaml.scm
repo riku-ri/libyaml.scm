@@ -20,6 +20,7 @@
 ;(define-syntax write/ (syntax-rules () ((write/ towrite ...) (let () (write towrite ...) (print "")))))
 
 (include-relative "include/2yaml.scm")
+(include-relative "include/2map-fixed-yaml.scm")
 
 (define (libyaml-argparse <> <without-value> <with-value> before-error)
 	(if (not (list? <>)) (error "argument is not a list" <>))
@@ -48,47 +49,6 @@
 ;		((pair? yaml) (cons (fixed-mapping (car yaml)) (fixed-mapping (cdr yaml))))
 ;		(else (if (procedure? yaml) (fixed-mapping (yaml)) yaml))))
 
-(define (map-fixed-yaml<- . yaml><)
-	(if (null? yaml><) (error "no yaml provided"))
-	(define yaml (car yaml><))
-	(define >< (libyaml-argparse (cdr yaml><) '() '(#:swap-when) #:no-clear))
-	(let*
-		(
-			(?swap-when (assoc #:swap-when (cdr ><)))
-			(swap-when (if ?swap-when
-				(cdr ?swap-when)
-				(lambda (l r) (string>? (->string (car l)) (->string (car r))))))
-		)
-		(define (sort <>)
-			(define (insert ? <>)
-				(define (:insert <l> ? <r>)
-					(cond
-						((null? <r>) (reverse (cons ? <l>)))
-						((swap-when ? (car <r>)) (:insert (cons (car <r>) <l>) ? (cdr <r>)))
-						(else (append (reverse <l>) (list ?) <r>))))
-				(:insert '() ? <>))
-			(define (:sort todo done)
-				(cond
-					((null? todo) done)
-					(else (:sort (cdr todo) (insert (car todo) done)))))
-			(:sort <> '()))
-		(define (:map-fixed-yaml<- yaml)
-			(cond
-				((vector? yaml)
-					(cond
-						((= (vector-length yaml) 0) #())
-						(else (error (sprintf "non 0 size vector found:~%  ~S" yaml)))))
-				((null? yaml) '())
-				((list? yaml) (map :map-fixed-yaml<- yaml))
-				((pair? yaml)
-					(cons
-						(:map-fixed-yaml<- (car yaml))
-						(:map-fixed-yaml<- (cdr yaml))))
-				(else (if (procedure? yaml)
-					(let ((yaml (yaml)))
-						(:map-fixed-yaml<- (sort yaml)))
-					yaml))))
-		(list->vector (map :map-fixed-yaml<- (vector->list yaml)))))
 
 (define (&in-yaml-map? == mapping key)
 	(if (not (procedure? mapping))

@@ -7,7 +7,7 @@
 
 (define-foreign-type enum int)
 
-(define (yaml<- . ><)
+(define (yaml<- . <>)
 	(define-syntax *->
 		(syntax-rules ()
 			((*-> type-string pointer to-access ... return-type)
@@ -18,13 +18,12 @@
 				))))
 	(define errtag "[yaml<-]")
 	(define inerr "internal logic error, please contact maintainer")
-	(define delay-error (delay (error inerr)))
 	(let*
 		(
 			(assoc* (lambda (if-not-in key alist)
 				(cond ((assoc key alist) (cdr (assoc key alist))) (else if-not-in))))
-			(>< (varg >< '(#:with-value #:encoding) #:enable-unknown))
-			(input (let ((literal (assoc* delay-error #:literal ><)))
+			(>< (varg <> '(#:with-value #:encoding) #:enable-unknown))
+			(input (let ((literal (cdr (assoc #:literal ><))))
 				(cond
 					((> (length literal) 1) (error "unknown arguments" (cdr literal)))
 					((= (length literal) 0) (current-input-port))
@@ -101,10 +100,10 @@
 					input))
 			))
 
-		(let ((with-value (assoc* delay-error #:with-value ><)))
+		(let ((with-value (cdr (assoc #:with-value ><))))
 			(cond
 				((assoc #:encoding with-value)
-					(let ((encoding (assoc* delay-error #:encoding with-value)))
+					(let ((encoding (cdr (assoc #:encoding with-value))))
 						(yaml_parser_set_encoding &parser encoding)
 						(cond
 							((not (= (*-> "yaml_parser_t" &parser "encoding" enum) encoding))
@@ -254,5 +253,3 @@
 		(let ((yaml (:yaml<- (yaml-parser-parse &parser &event)))) (list->vector yaml))
 	) ; let
 )
-
-(print (yaml<-))

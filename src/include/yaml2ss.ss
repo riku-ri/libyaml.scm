@@ -18,6 +18,7 @@
 				))))
 	(define errtag "[yaml<-]")
 	(define inerr "internal logic error, please contact maintainer")
+	(define (null . ||) '())
 	(let*
 		(
 			(assoc* (lambda (if-not-in key alist)
@@ -145,7 +146,8 @@
 								; But yaml-tag will generate an error
 									(cond
 										; Regular expression is from https://yaml.org/spec/1.2.2/
-										((or (= (string-length <<) 0) (irregex-match? "null|Null|NULL|~" <<)) #())
+										((or (= (string-length <<) 0) (irregex-match? "null|Null|NULL|~" <<)) null)
+										;FIXME empty document will get setting yaml-null here
 										((irregex-match? "true|True|TRUE|false|False|FALSE" <<)
 											(let* ((^ (char-downcase (string-ref << 0))))
 												(cond ((char=? ^ #\f) #f) ((char=? ^ #\f) #f) ((char=? ^ #\t) #t))))
@@ -206,26 +208,33 @@
 						(let* ((<< (:yaml<- (yaml-parser-parse &parser &event)))) <<)
 					))
 				((= event YAML_SEQUENCE_START_EVENT)
-					(
-						((lambda (@) (@ @)) (lambda (@) (lambda ()
-							(let* ; anchor need to be cached before next parse
+					(let
+						(
+							(yaml
 								(
-									(anchor (*-> "yaml_event_t" &event "data.sequence_start.anchor" c-string))
-									(event (yaml-parser-parse &parser &event))
-								)
-								; If not get event but use the value in member of &event
-								; all recursion will end by the most internal YAML_SEQUENCE_END_EVENT
-								; this error will not occure in YAML_STREAM_START_EVENT
-								; because stream would never be nested
-								(cond
-									((= event YAML_SEQUENCE_END_EVENT) '())
-									(else
-										(let ((<< (cons (:yaml<- event) ((@ @)))))
-											(if anchor (if (not (assoc anchor <anchor>))
-												(set! <anchor> (cons (cons anchor <<) <anchor>))))
-											<<)
-									))))))
-					))
+									((lambda (@) (@ @)) (lambda (@) (lambda ()
+										(let* ; anchor need to be cached before next parse
+											(
+												(anchor (*-> "yaml_event_t" &event "data.sequence_start.anchor" c-string))
+												(event (yaml-parser-parse &parser &event))
+											)
+											; If not get event but use the value in member of &event
+											; all recursion will end by the most internal YAML_SEQUENCE_END_EVENT
+											; this error will not occure in YAML_STREAM_START_EVENT
+											; because stream would never be nested
+											(cond
+												((= event YAML_SEQUENCE_END_EVENT) '())
+												(else
+													(let ((<< (cons (:yaml<- event) ((@ @)))))
+														(if anchor (if (not (assoc anchor <anchor>))
+															(set! <anchor> (cons (cons anchor <<) <anchor>))))
+														<<)
+												))))))
+								))
+						)
+						(list->vector yaml)
+						)
+				)
 				((= event YAML_MAPPING_START_EVENT)
 					(let*
 						(
@@ -243,13 +252,36 @@
 													)
 													(let ((<< (cons (cons k v) ((@ @))))) <<))))))))))
 						)
-						(let ((mapping (lambda () mapping)))
-							(if anchor
-								(if (not (assoc anchor <anchor>))
+						(if anchor
+							(if (not (assoc anchor <anchor>))
 								(set! <anchor> (cons (cons anchor mapping) <anchor>))))
-							mapping))) ; Use (lambda) to distinguish yaml-list and yaml-mapping
+						mapping))
 			) ; (cond)
 		)
-		(let ((yaml (:yaml<- (yaml-parser-parse &parser &event)))) (list->vector yaml))
+		(let* ((document-list (:yaml<- (yaml-parser-parse &parser &event))))
+			(define (yaml . document-index)
+				(cond
+					((null? document-list) document-list)
+					((null? document-index) (list-ref document-list 0))
+					((> (length document-index) 1)
+						(error errtag "unknown arguments" (cdr document-index)))
+					((= (length document-index) 1)
+						(let ((i (car document-index)))
+							(if (not (integer? i))
+								(error errtag (sprintf "document index is not a integer ~S" i)))
+							(cond
+								((>= i (length document-list))
+									(error errtag (sprintf
+										"index ~S is lager then max document index ~S"
+										i (- (length document-list) 1))))
+								((< i -1) (error errtag (sprintf "invalid document index ~S" i)))
+								((= i -1) document-list)
+								(else (list-ref document-list i)))
+						)
+					)
+					(else (error errtag inerr))
+				))
+			yaml
+		)
 	) ; let
 )

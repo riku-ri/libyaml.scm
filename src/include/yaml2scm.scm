@@ -2,7 +2,7 @@
 (import (chicken irregex))
 
 (include-relative "foreign.scm")
-(include-relative "../varg.scm/src/include/varg.scm")
+(include-relative "../varg.ss/src/include/varg.ss")
 (foreign-declare "#include <yaml.h>")
 
 (define-foreign-type enum int)

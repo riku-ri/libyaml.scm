@@ -1,6 +1,6 @@
 [submodule "src/libyaml"]
 	path = src/libyaml
 	url = https://github.com/yaml/libyaml.git
-[submodule "src/varg.scm"]
-	path = src/varg.scm
-	url = https://github.com/riku-ri/varg.scm
+[submodule "src/varg.ss"]
+	path = src/varg.ss
+	url = https://github.com/riku-ri/varg.ss

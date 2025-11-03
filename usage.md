@@ -102,7 +102,7 @@ Functions and enum members can be used in scheme code directly.
 <td>inf</td>
 <td>inf</td>
 <td><code>+.inf</code><br/><code>-.INF</code></td>
-<td><code>+.inf.0</code><br/><code>-.inf.0</code></td>
+<td><code>+inf.0</code><br/><code>-inf.0</code></td>
 <td/>
 </tr>
 

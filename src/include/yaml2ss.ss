@@ -18,7 +18,6 @@
 				))))
 	(define errtag "[yaml<-]")
 	(define inerr "internal logic error, please contact maintainer")
-	(define (null . ||) '())
 	(let*
 		(
 			(assoc* (lambda (if-not-in key alist)
@@ -146,8 +145,7 @@
 								; But yaml-tag will generate an error
 									(cond
 										; Regular expression is from https://yaml.org/spec/1.2.2/
-										((or (= (string-length <<) 0) (irregex-match? "null|Null|NULL|~" <<)) null)
-										;FIXME empty document will get setting yaml-null here
+										((or (= (string-length <<) 0) (irregex-match? "null|Null|NULL|~" <<)) '())
 										((irregex-match? "true|True|TRUE|false|False|FALSE" <<)
 											(let* ((^ (char-downcase (string-ref << 0))))
 												(cond ((char=? ^ #\f) #f) ((char=? ^ #\f) #f) ((char=? ^ #\t) #t))))
@@ -255,13 +253,17 @@
 						(if anchor
 							(if (not (assoc anchor <anchor>))
 								(set! <anchor> (cons (cons anchor mapping) <anchor>))))
-						mapping))
+						(list mapping)))
 			) ; (cond)
 		)
-		(let* ((document-list (:yaml<- (yaml-parser-parse &parser &event))))
+		(let*
+			(
+				(document-list (:yaml<- (yaml-parser-parse &parser &event)))
+				(document-list (if (null? document-list) '(()) document-list))
+				; empty file will not go into SCALAR event and get ~
+			)
 			(define (yaml . document-index)
 				(cond
-					((null? document-list) document-list)
 					((null? document-index) (list-ref document-list 0))
 					((> (length document-index) 1)
 						(error errtag "unknown arguments" (cdr document-index)))
@@ -284,4 +286,12 @@
 			yaml
 		)
 	) ; let
+)
+
+(display
+
+(with-input-from-file "/tmp/tmp.yaml" (lambda ()
+((yaml<- (current-input-port)))
+))
+
 )

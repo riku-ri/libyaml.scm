@@ -287,11 +287,3 @@
 		)
 	) ; let
 )
-
-(display
-
-(with-input-from-file "/tmp/tmp.yaml" (lambda ()
-((yaml<- (current-input-port)))
-))
-
-)

@@ -6,41 +6,45 @@
 (import libyaml)
 (import test)
 
+(define-syntax test? (syntax-rules ()
+	((test? ?) (let ()
+		(test #t ?)))))
+
 (test-group "yaml<-"
-	(test #t (procedure? (yaml<- "")))
-	(test #t (procedure?
+	(test? (procedure? (yaml<- "")))
+	(test? (procedure?
 			(with-input-from-file "/dev/null"
 				(lambda () (yaml<- (current-input-port))))))
 	(test-group "varg"
 		(test-group "#:encoding"
-			(test #t (null? ((yaml<- `(#:encoding . ,YAML_ANY_ENCODING) ""))))
-			(test #t (null? ((yaml<- `(#:encoding . ,YAML_UTF8_ENCODING) ""))))
-			(test #t (string=? "测试" ((yaml<- `(#:encoding . ,YAML_UTF8_ENCODING) "测试"))))
+			(test? (null? ((yaml<- `(#:encoding . ,YAML_ANY_ENCODING) ""))))
+			(test? (null? ((yaml<- `(#:encoding . ,YAML_UTF8_ENCODING) ""))))
+			(test? (string=? "测试" ((yaml<- `(#:encoding . ,YAML_UTF8_ENCODING) "测试"))))
 			; does not test other encodings
 			(test-error ((yaml<- `(#:encoding . -1) "")))
 		)
 	)
 	(test-group "document"
-		(test #t (procedure? (yaml<- "")))
+		(test? (procedure? (yaml<- "")))
 		(test-error ((yaml<- "") 1))
 		(test 2 ((yaml<- "--- 1\n--- 2") 1))
 	)
 	(test-group "scalar"
 		(test-group "null"
-			(test #t (null? ((yaml<- ""))))
-			(test #t (null? ((yaml<- "~"))))
-			(test #t (null? ((yaml<- "null"))))
-			(test #t (null? ((yaml<- "Null"))))
-			(test #t (null? ((yaml<- "NULL"))))
-			(test #t (null?
+			(test? (null? ((yaml<- ""))))
+			(test? (null? ((yaml<- "~"))))
+			(test? (null? ((yaml<- "null"))))
+			(test? (null? ((yaml<- "Null"))))
+			(test? (null? ((yaml<- "NULL"))))
+			(test? (null?
 				((with-input-from-file
 					"/dev/null"
 					(lambda () (yaml<- (current-input-port)))))))
 		)
 		(test-group "boolean"
-			(test #t ((yaml<- "true")))
-			(test #t ((yaml<- "True")))
-			(test #t ((yaml<- "TRUE")))
+			(test? ((yaml<- "true")))
+			(test? ((yaml<- "True")))
+			(test? ((yaml<- "TRUE")))
 			(test #f ((yaml<- "false")))
 			(test #f ((yaml<- "False")))
 			(test #f ((yaml<- "FALSE")))
@@ -51,13 +55,13 @@
 					(
 						(test-int (syntax-rules ()
 							((test-int num str) (let ()
-								(test #t (integer? ((yaml<- str))))
+								(test? (integer? ((yaml<- str))))
 								(test num ((yaml<- str)))))))
 						(test-int+- (syntax-rules ()
 							((test-int num str) (let ()
-								(test #t (integer? ((yaml<- (string-append "-" str)))))
+								(test? (integer? ((yaml<- (string-append "-" str)))))
 								(test (- num) ((yaml<- (string-append "-" str))))
-								(test #t (integer? ((yaml<- (string-append "+" str)))))
+								(test? (integer? ((yaml<- (string-append "+" str)))))
 								(test (+ num) ((yaml<- (string-append "+" str))))))))
 					)
 					(test-int+- 1 "1")
@@ -74,11 +78,11 @@
 			(test-group "real"
 				(let-syntax ((test-real+- (syntax-rules ()
 					((test-real+- num str) (let ()
-						;(test #t (real? ((yaml<- str))))
+						;(test? (real? ((yaml<- str))))
 						(test num ((yaml<- str)))
-						;(test #t (real? ((yaml<- (string-append "-" str)))))
+						;(test? (real? ((yaml<- (string-append "-" str)))))
 						(test (- num) ((yaml<- (string-append "-" str))))
-						;(test #t (real? ((yaml<- (string-append "+" str)))))
+						;(test? (real? ((yaml<- (string-append "+" str)))))
 						(test (+ num) ((yaml<- (string-append "+" str))))
 					)))))
 					(test-real+- 0.0 "0.0")
@@ -96,8 +100,8 @@
 				(test -inf.0 ((yaml<- "-.inf"))) (test -inf.0 ((yaml<- "-.INF")))
 				(test -inf.0 ((yaml<- "-.Inf")))
 
-				(test #t (nan? ((yaml<- ".nan")))) (test #t (nan? ((yaml<- ".NAN"))))
-				(test #t (nan? ((yaml<- ".NaN"))))
+				(test? (nan? ((yaml<- ".nan")))) (test? (nan? ((yaml<- ".NAN"))))
+				(test? (nan? ((yaml<- ".NaN"))))
 			)
 		)
 		(test-group "string"
@@ -131,4 +135,35 @@
 			(mapv '() (mapv "key"
 				((yaml<- "key:\n  ~:\n    - \"\\x40\"")))))
 	))
+)
+
+(test-group "if.ss"
+	(test-group "yscalar?"
+		(test? (yscalar? '()))
+		(test? (yscalar? #t)) (test? (yscalar? #f))
+		(test? (yscalar? 0)) (test? (yscalar? 0.1)) (test? (yscalar? (/ 1 2)))
+		(test? (yscalar? "")) (test? (yscalar? "关注电池耐用形色好谢谢喵"))
+		(test? (not (yscalar? #:keyword)))
+		(test? (not (yscalar? 'symbol)))
+	)
+	(test-group "ymap?"
+		(test? (ymap? '(())))
+		(test? (ymap? '(((0 . 1)))))
+		(test? (ymap? '(((() . "null")))))
+		(test? (not (ymap? '((("key" . false-here))))))
+		(test? (not (ymap? '(((false-here . "value"))))))
+		(test? (ymap? '(( (#() . (( ("key" . #("value" 0.1) ) ))) )) ))
+	)
+	(test-group "ylist?"
+		(test? (ylist? #()))
+		(test? (ylist? #(#())))
+		(test? (ylist? #(1 "" #() (()))))
+		(test? (ylist? #((( ((((0 . 1))) . #("u" "v")) )) "tail")))
+		(test? (not (ylist? #(symbol))))
+		(test? (not (ylist? #(#:keyword))))
+	)
+	(test-group "yaml?"
+		(test? (yaml? (lambda (?) '())))
+		(test? (yaml? (lambda (?) '("after zero" 2 #(3 4) (( (() . #f) ))))))
+	)
 )

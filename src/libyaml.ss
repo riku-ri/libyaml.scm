@@ -20,6 +20,7 @@
 ;(define-syntax write/ (syntax-rules () ((write/ towrite ...) (let () (write towrite ...) (print "")))))
 
 (include-relative "include/yaml2ss.ss")
+(include-relative "include/if.ss")
 ;(include-relative "include/yaml2map-fixed-yaml.scm")
 ;(include-relative "include/if-in-yaml-map.scm")
 ;(include-relative "include/scm2yaml.scm")

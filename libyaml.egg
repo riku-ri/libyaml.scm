@@ -15,29 +15,44 @@
 ;((distribution-files)
 
 (components
-(c-object git/yaml/libyaml/src/scanner.c (source git/yaml/libyaml/src/scanner.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./git/yaml/libyaml/include/."))
-(c-object git/yaml/libyaml/src/reader.c (source git/yaml/libyaml/src/reader.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./git/yaml/libyaml/include/."))
-(c-object git/yaml/libyaml/src/api.c (source git/yaml/libyaml/src/api.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./git/yaml/libyaml/include/."))
-(c-object git/yaml/libyaml/src/parser.c (source git/yaml/libyaml/src/parser.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./git/yaml/libyaml/include/."))
-(c-object git/yaml/libyaml/src/writer.c (source git/yaml/libyaml/src/writer.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./git/yaml/libyaml/include/."))
-(c-object git/yaml/libyaml/src/loader.c (source git/yaml/libyaml/src/loader.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./git/yaml/libyaml/include/."))
-(c-object git/yaml/libyaml/src/dumper.c (source git/yaml/libyaml/src/dumper.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./git/yaml/libyaml/include/."))
-(c-object git/yaml/libyaml/src/emitter.c (source git/yaml/libyaml/src/emitter.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./git/yaml/libyaml/include/."))
-(extension libyaml
-(source src/libyaml.ss)
-(objects
-git/yaml/libyaml/src/scanner.c
-git/yaml/libyaml/src/reader.c
-git/yaml/libyaml/src/api.c
-git/yaml/libyaml/src/parser.c
-git/yaml/libyaml/src/writer.c
-git/yaml/libyaml/src/loader.c
-git/yaml/libyaml/src/dumper.c
-git/yaml/libyaml/src/emitter.c
-)
-(csc-options "-I" "./include/." "-C" "-I./git/yaml/libyaml/include/.")
-(linkage dynamic)
-)
+	(c-object git/yaml/libyaml/src/scanner.c (source git/yaml/libyaml/src/scanner.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./git/yaml/libyaml/include/."))
+	(c-object git/yaml/libyaml/src/reader.c (source git/yaml/libyaml/src/reader.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./git/yaml/libyaml/include/."))
+	(c-object git/yaml/libyaml/src/api.c (source git/yaml/libyaml/src/api.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./git/yaml/libyaml/include/."))
+	(c-object git/yaml/libyaml/src/parser.c (source git/yaml/libyaml/src/parser.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./git/yaml/libyaml/include/."))
+	(c-object git/yaml/libyaml/src/writer.c (source git/yaml/libyaml/src/writer.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./git/yaml/libyaml/include/."))
+	(c-object git/yaml/libyaml/src/loader.c (source git/yaml/libyaml/src/loader.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./git/yaml/libyaml/include/."))
+	(c-object git/yaml/libyaml/src/dumper.c (source git/yaml/libyaml/src/dumper.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./git/yaml/libyaml/include/."))
+	(c-object git/yaml/libyaml/src/emitter.c (source git/yaml/libyaml/src/emitter.c) (csc-options "-C" "-D HAVE_CONFIG_H" "-I./include/." "-I./git/yaml/libyaml/include/."))
+
+	(extension libyaml
+		(component-dependencies
+			libyaml.yaml.h
+			libyaml.yaml2ss
+			libyaml.if
+		)
+		(source src/libyaml.ss)
+	)
+	(extension libyaml.yaml2ss
+		(component-dependencies libyaml.yaml.h varg.varg)
+		(source src/libyaml/yaml2ss.ss)
+	)
+	(extension libyaml.if (source src/libyaml/if.ss))
+	(extension libyaml.yaml.h
+		(source .local/yaml.h.ss) ; TODO: set a stable path
+		(objects
+			git/yaml/libyaml/src/scanner.c
+			git/yaml/libyaml/src/reader.c
+			git/yaml/libyaml/src/api.c
+			git/yaml/libyaml/src/parser.c
+			git/yaml/libyaml/src/writer.c
+			git/yaml/libyaml/src/loader.c
+			git/yaml/libyaml/src/dumper.c
+			git/yaml/libyaml/src/emitter.c
+		)
+		;(csc-options "-I" "./include/." "-C" "-I./git/yaml/libyaml/include/.")
+		(csc-options "-C" "-I./git/yaml/libyaml/include/.")
+	)
+	(extension varg.varg (source git/riku-ri/varg.ss/src/varg/varg.ss))
 )
 
 )

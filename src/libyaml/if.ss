@@ -1,3 +1,7 @@
+(module (libyaml if) *
+
+(import scheme (chicken base))
+
 (define (yaml? ?)
 	(and
 		(procedure? ?)
@@ -48,3 +52,5 @@
 		(number? ?)
 		(string? ?)
 	))
+
+) ;module

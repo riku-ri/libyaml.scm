@@ -1,28 +1,14 @@
-(module (libyaml) *
+(module (libyaml) ()
 
-(import scheme)
-(import (chicken base))
-(import (chicken syntax))
-(import (chicken foreign))
-(import (chicken keyword))
-(import (chicken format))
-(import (chicken string))
-(import (chicken irregex))
-(import (chicken memory))
+(import scheme (chicken module))
 
-(include "foreign.scm")
+(define-syntax importrec (syntax-rules ()
+	((importrec lib ...) (begin
+		(import lib ...)(reexport lib ...)))))
 
-(foreign-declare "#include <yaml.h>")
+(importrec (libyaml yaml.h))
+(importrec (libyaml if))
 
-(define-foreign-type enum int)
-
-;; FOR test
-;(define-syntax write/ (syntax-rules () ((write/ towrite ...) (let () (write towrite ...) (print "")))))
-
-(include-relative "include/yaml2ss.ss")
-(include-relative "include/if.ss")
-;(include-relative "include/yaml2map-fixed-yaml.scm")
-;(include-relative "include/if-in-yaml-map.scm")
-;(include-relative "include/scm2yaml.scm")
+(importrec (libyaml yaml2ss))
 
 )

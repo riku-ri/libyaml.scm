@@ -56,7 +56,7 @@ template<>class free_t<std::shared_ptr<CXTranslationUnit>>
 	{public:free_t( std::shared_ptr<CXTranslationUnit> &_){clang_disposeTranslationUnit(*_);}};
 
 const char * header[] = {
-"(module yaml.h *" ,
+"(module (libyaml yaml.h) *" ,
 "(import (chicken foreign))" ,
 "(foreign-declare \"#include <yaml.h>\")"
 };
@@ -88,6 +88,7 @@ int main(int argc , char * argv[])
 		c2scm ,
 		NULL
 	);
+	for(auto f : footer) printf("%s\n" , f);
 	return 0;
 }
 

@@ -1,8 +1,18 @@
+(module (libyaml yaml2ss)
+	(
+		yaml<-
+	)
+
+(import scheme)
+(import (chicken base))
+(import (chicken string))
+(import (chicken format))
 (import (chicken memory))
 (import (chicken irregex))
+(import (chicken foreign))
+(import (libyaml yaml.h))
+(import (varg varg))
 
-(include-relative "foreign.scm")
-(include-relative "../varg.ss/src/include/varg.ss")
 (foreign-declare "#include <yaml.h>")
 
 (define-foreign-type enum int)
@@ -287,3 +297,5 @@
 		)
 	) ; let
 )
+
+) ;module

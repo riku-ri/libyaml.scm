@@ -7,9 +7,8 @@
 (maintainer "riku-ri")
 (category parsing)
 (license "MIT")
-;(dependencies)
-;(test-dependencies test)
-;(build-dependencies)
+(dependencies varg)
+(test-dependencies test)
 ;(foreign-dependencies git)
 (platform (or linux unix))
 ;((distribution-files)
@@ -33,7 +32,10 @@
 		(source src/libyaml.ss)
 	)
 	(extension libyaml.yaml2ss
-		(component-dependencies libyaml.yaml.h varg.varg)
+		(component-dependencies
+			libyaml.yaml.h
+			;varg.varg
+		)
 		(source src/libyaml/yaml2ss.ss)
 	)
 	(extension libyaml.if (source src/libyaml/if.ss))
@@ -52,7 +54,7 @@
 		;(csc-options "-I" "./include/." "-C" "-I./git/yaml/libyaml/include/.")
 		(csc-options "-C" "-I./git/yaml/libyaml/include/.")
 	)
-	(extension varg.varg (source git/riku-ri/varg.ss/src/varg/varg.ss))
+	;(extension varg.varg (source git/riku-ri/varg.ss/src/varg/varg.ss))
 )
 
 )

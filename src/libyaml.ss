@@ -10,5 +10,6 @@
 (importrec (libyaml if))
 
 (importrec (libyaml yaml2ss))
+(importrec (libyaml ss2yaml))
 
 )

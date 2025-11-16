@@ -26,10 +26,20 @@
 	(extension libyaml
 		(component-dependencies
 			libyaml.yaml.h
+			libyaml.ss2yaml
 			libyaml.yaml2ss
 			libyaml.if
 		)
 		(source src/libyaml.ss)
+	)
+	(extension libyaml.ss2yaml
+		(component-dependencies
+			libyaml.yaml.h
+			libyaml.yaml2ss
+			libyaml.if
+			;varg.varg
+		)
+		(source src/libyaml/ss2yaml.ss)
 	)
 	(extension libyaml.yaml2ss
 		(component-dependencies

@@ -57,13 +57,16 @@
 		(memset (foreign-lambda c-pointer "memset" c-pointer int size_t))
 		(&parser (allocate (foreign-type-size "struct yaml_parser_s")))
 		(&event (allocate (foreign-type-size "struct yaml_event_s")))
+		(close (lambda ()
+			(yaml_event_delete &event) (yaml_parser_delete &parser)
+			(free &parser) (free &event)
+			(if (input-port? input) (close-input-port input)))
+		)
 	) (let-syntax
 	(
 		(abort (syntax-rules ()
 			((abort condition ...) (begin
-				(yaml_event_delete &event) (yaml_parser_delete &parser)
-				(free &parser) (free &event)
-				(if (input-port? input) (close-input-port input))
+				(close)
 				(abort condition ...)))))
 	) (let*
 	(
@@ -312,6 +315,7 @@
 				)
 				(else (abort (ycondition 'messageerrtag inerr)))
 			))
+		(close)
 		yaml
 	)
 ))))) ;define/let/let-syntax

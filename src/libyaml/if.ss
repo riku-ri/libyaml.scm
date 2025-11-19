@@ -1,11 +1,16 @@
 (module (libyaml if) *
 
 (import scheme (chicken base))
+(import (chicken condition))
 
 (define (yaml? ?)
 	(and
 		(procedure? ?)
-		(list? (? -1))
+		(handle-exceptions e #f (list? (? -1)))
+		(handle-exceptions e #f (if (?) #t))
+		; only catch exception here
+		; just keep always true if no exception
+		(equal? (car (? -1)) (?))
 		(foldl (lambda (l r) (and l r)) #t
 			(map
 				((lambda (@) (@ @)) (lambda (@) (lambda (?)

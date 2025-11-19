@@ -27,22 +27,22 @@
 						"C_return((_p)->" to-access ... ");")
 					pointer
 				))))
-		(abort (syntax-rules ()
-			((abort condition ...) (begin
-				(print-call-chain (current-error-port))(newline (current-error-port))
-				(abort condition ...)))))
 		(ycondition (syntax-rules ()
 			((ycondition ? ...)
 				(condition (list 'libyaml ? ...)))))
 	) (let*
 	(
-		(errtag "[yaml<-]")
 		(inerr "internal logic error, please contact maintainer")
-		(>< (handle-exceptions e
-			(abort (ycondition (apply condition
-				(map (lambda (c) (cons 'libyaml (cdr c))) (condition->list e)))))
-			; exception kind: 'varg -> 'libyaml
-			(varg <> '(#:with-value #:encoding) #:enable-unknown)))
+		(><
+			(varg <>
+				'(#:with-value #:encoding)
+				'(#:without-value #:encoding #:close-input-port)
+				#:enable-unknown
+				;#:verbose
+			)
+		)
+		(?close-input-port
+			(member #:close-input-port (cdr (assoc #:without-value ><))))
 		(input (let ((literal (cdr (assoc #:literal ><))))
 			(cond
 				((> (length literal) 1) (abort (ycondition
@@ -60,8 +60,8 @@
 		(close (lambda ()
 			(yaml_event_delete &event) (yaml_parser_delete &parser)
 			(free &parser) (free &event)
-			(if (input-port? input) (close-input-port input)))
-		)
+			(if (and (input-port? input) ?close-input-port) (close-input-port input))
+		))
 	) (let-syntax
 	(
 		(abort (syntax-rules ()

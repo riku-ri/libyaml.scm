@@ -163,7 +163,15 @@
 		(test? (not (ylist? #(#:keyword))))
 	)
 	(test-group "yaml?"
-		(test? (yaml? (lambda (?) '())))
-		(test? (yaml? (lambda (?) '("after zero" 2 #(3 4) (( (() . #f) ))))))
+		(test? (not (yaml? (lambda (?) '()))))
+		(test? (not (yaml? (lambda (?) '("after zero" 2 #(3 4) (( (() . #f) )))))))
+		(test? (not (yaml? (lambda (? . ...)
+			'()))))
+		(test? (not (yaml? (lambda (? . ...)
+			'("after zero" 2 #(3 4) (( (() . #f) )))))))
+		(test? (yaml? (yaml<- "")))
+		(test? (yaml?
+			(with-input-from-file "/dev/null"
+				(lambda () (yaml<- (current-input-port))))))
 	)
 )

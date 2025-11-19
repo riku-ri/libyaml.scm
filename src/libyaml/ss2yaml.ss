@@ -40,8 +40,12 @@
 		(>< (varg
 			<>
 			'(#:literal yaml)
-			'(#:with-value #:indent #:port #:encoding)))
-		(yaml (car (cdr (assoc #:literal ><))))
+			'(#:with-value #:indent #:port #:encoding)
+			'(#:without-value #:close-output-port)
+		))
+		(yaml ((car (cdr (assoc #:literal ><))) -1))
+		(?close-output-port
+			(member #:close-output-port (cdr (assoc #:without-value ><))))
 	) (let*
 	(
 		(port (let ((with-value (cdr (assoc #:with-value ><))))
@@ -66,7 +70,8 @@
 			(yaml_event_delete &event)
 			(free &emitter)
 			(free &event)
-			(close-output-port port)))
+			(if ?close-output-port (close-output-port port))
+		))
 	) (let-syntax
 	(
 		(abort (syntax-rules ()

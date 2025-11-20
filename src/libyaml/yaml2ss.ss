@@ -12,6 +12,7 @@
 (import (chicken foreign))
 (import (chicken condition))
 (import (libyaml yaml.h))
+(import (libyaml if))
 (import varg)
 
 (foreign-declare "#include <yaml.h>")
@@ -28,8 +29,8 @@
 					pointer
 				))))
 		(ycondition (syntax-rules ()
-			((ycondition ? ...)
-				(condition (list 'libyaml ? ...)))))
+			((ycondition message ...)
+				(condition (list 'libyaml (string->symbol "message") message) ...))))
 	) (let*
 	(
 		(inerr "internal logic error, please contact maintainer")
@@ -46,14 +47,14 @@
 		(input (let ((literal (cdr (assoc #:literal ><))))
 			(cond
 				((> (length literal) 1) (abort (ycondition
-					'message (sprintf "unknown arguments:\n~S" (cdr literal)))))
+					(sprintf "unknown arguments:\n~S" (cdr literal)))))
 				((= (length literal) 0) (current-input-port))
 				((= (length literal) 1) (car literal)))))
 		(string->number (lambda (?)
 			(if (string->number ?)
 				(string->number ?)
 				(abort (ycondition
-					'message (sprintf "(string->number) convert error:\n~S" ?))))))
+					(sprintf "(string->number) convert error:\n~S" ?))))))
 		(memset (foreign-lambda c-pointer "memset" c-pointer int size_t))
 		(&parser (allocate (foreign-type-size "struct yaml_parser_s")))
 		(&event (allocate (foreign-type-size "struct yaml_event_s")))
@@ -87,7 +88,7 @@
 										(+ 1 (*-> "yaml_parser_t" &parser "problem_mark.line" size_t))
 										(+ 1 (*-> "yaml_parser_t" &parser "problem_mark.column" size_t))))
 							)
-							(abort (ycondition 'message errmessage))))
+							(abort (ycondition errmessage))))
 					(else
 						(*-> "yaml_event_t" event "type" enum)
 					)
@@ -102,7 +103,7 @@
 		)
 		(cond
 			((not (= 1 <<))
-				(abort (ycondition 'message (sprintf
+				(abort (ycondition (sprintf
 					(string-append
 						"yaml_parser_initialize() failed and return [~S] but not [1]."
 						" "
@@ -119,7 +120,7 @@
 			((input-port? input)
 				(yaml_parser_set_input_file &parser (port->FILE* input)))
 			(else
-				(abort (ycondition 'message (sprintf
+				(abort (ycondition (sprintf
 					"input is not a string or input-port:\n~S"
 					input))))
 		))
@@ -131,7 +132,7 @@
 					(yaml_parser_set_encoding &parser encoding)
 					(cond
 						((not (= (*-> "yaml_parser_t" &parser "encoding" enum) encoding))
-							(abort (ycondition 'message (sprintf
+							(abort (ycondition (sprintf
 								"set encoding to ~S failed" encoding)))))))))
 	(define <anchor> (list))
 	(define (:yaml<- event)
@@ -141,14 +142,14 @@
 				(*-> "yaml_event_t" &event "data.sequence_start.tag" c-string)
 				(*-> "yaml_event_t" &event "data.mapping_start.tag" c-string)
 			)
-			(abort (ycondition 'message (sprintf
+			(abort (ycondition (sprintf
 				"tag at [line:~S , colunm:~S]"
 				(+ 1 (*-> "yaml_event_t" &event "start_mark.line" size_t))
 				(+ 1 (*-> "yaml_event_t" &event "start_mark.column" size_t)))
 				"yaml-tag is not supported"))))
 		(cond
 			((= event YAML_NO_EVENT)
-				(abort (ycondition 'message (sprintf
+				(abort (ycondition (sprintf
 					"You should never go into this event ~S" 'YAML_NO_EVENT))))
 			((= event YAML_ALIAS_EVENT)
 				(let
@@ -157,7 +158,7 @@
 					)
 					(cond
 						((not (assoc anchor <anchor>))
-							(abort (ycondition 'message
+							(abort (ycondition
 								"No reference or circular reference to anchor" anchor))))
 					(cdr (assoc anchor <anchor>))))
 			((= event YAML_SCALAR_EVENT)
@@ -224,7 +225,7 @@
 							((= event YAML_DOCUMENT_END_EVENT) last)
 							(else
 								; ((@ @) (:yaml<- event))
-								(abort (ycondition 'message
+								(abort (ycondition
 									(string-append
 										"YAML_DOCUMENT_END_EVENT does not appear after "
 										"twice yaml_parser_parse from YAML_DOCUMENT_START_EVENT"
@@ -295,28 +296,29 @@
 			(cond
 				((null? document-index) (list-ref document-list 0))
 				((> (length document-index) 1)
-					(abort (ycondition 'message (sprintf
+					(abort (ycondition (sprintf
 						"unknown arguments:\n~S" (cdr document-index)))))
 				((= (length document-index) 1)
 					(let ((i (car document-index)))
 						(if (not (integer? i))
-							(abort (ycondition 'message (sprintf
+							(abort (ycondition (sprintf
 								"document index is not a integer ~S" i))))
 						(cond
 							((>= i (length document-list))
-								(abort (ycondition 'message (sprintf
+								(abort (ycondition (sprintf
 									"index ~S is lager then max document index ~S"
 									i (- (length document-list) 1)))))
-							((< i -1) (abort (ycondition 'message (sprintf
+							((< i -1) (abort (ycondition (sprintf
 								"invalid document index ~S" i))))
 							((= i -1) document-list)
 							(else (list-ref document-list i)))
 					)
 				)
-				(else (abort (ycondition 'messageerrtag inerr)))
+				(else (abort (ycondition inerr)))
 			))
-		(close)
-		yaml
+		(cond
+			((yaml? yaml) (close) yaml)
+			(else (abort (ycondition inerr))))
 	)
 ))))) ;define/let/let-syntax
 

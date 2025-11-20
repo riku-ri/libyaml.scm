@@ -41,11 +41,21 @@
 			<>
 			'(#:literal yaml)
 			'(#:with-value #:indent #:port #:encoding)
-			'(#:without-value #:close-output-port)
+			'(#:without-value
+				#:close-output-port
+				#:strict-input
+			)
 		))
-		(yaml ((car (cdr (assoc #:literal ><))) -1))
 		(?close-output-port
 			(member #:close-output-port (cdr (assoc #:without-value ><))))
+		(?strict-input
+			(member #:strict-input (cdr (assoc #:without-value ><))))
+		(yaml (let ((yaml (car (cdr (assoc #:literal ><))))) (cond
+			(?strict-input (cond
+				((yaml? yaml) (yaml -1))
+			))
+			(else yaml)
+		)))
 	) (let*
 	(
 		(port (let ((with-value (cdr (assoc #:with-value ><))))
@@ -119,7 +129,7 @@
 							alist))
 					(<-* &emitter yaml_mapping_end_event_initialize &event)
 				)
-				((vector? yaml)
+				((ylist? yaml)
 					(<-* &emitter yaml_sequence_start_event_initialize &event
 						#f #f 0 YAML_BLOCK_SEQUENCE_STYLE)
 					(map :<-yaml-in-document (vector->list yaml))

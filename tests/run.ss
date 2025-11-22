@@ -162,6 +162,18 @@
 		(test? (not (ylist? #(symbol))))
 		(test? (not (ylist? #(#:keyword))))
 	)
+	(test-group "ydoc?"
+		(test? (ydoc? '()))
+		(test? (ydoc? '("after zero" 2 #(3 4) (( (() . #f) )))))
+		(test? (ydoc? ((yaml<- "") -1)))
+		(test? (ydoc?
+			((with-input-from-file "/dev/null"
+				(lambda () (yaml<- (current-input-port)))) -1)))
+		(test? (not (ydoc? (yaml<- ""))))
+		(test? (not (ydoc?
+			(with-input-from-file "/dev/null"
+				(lambda () (yaml<- (current-input-port)))))))
+	)
 	(test-group "yaml?"
 		(test? (not (yaml? (lambda (?) '()))))
 		(test? (not (yaml? (lambda (?) '("after zero" 2 #(3 4) (( (() . #f) )))))))
@@ -173,5 +185,13 @@
 		(test? (yaml?
 			(with-input-from-file "/dev/null"
 				(lambda () (yaml<- (current-input-port))))))
+	)
+)
+
+(test-group "ss2yaml.ss"
+	(test-group "<-yaml"
+		(test-error (<-yaml (yaml<- "")))
+		(test? (not (not (<-yaml #:strict-input (yaml<- "")))))
+		(test? (not (not (<-yaml `()))))
 	)
 )

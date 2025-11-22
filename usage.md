@@ -1,4 +1,4 @@
-# libyaml.scm
+# libyaml.ss
 
 This is a chicken scheme egg,
 section structure will follow
@@ -10,7 +10,7 @@ section structure will follow
 
 ## Repository
 
-[https://github.com/riku-ri/libyaml.scm/](https://github.com/riku-ri/libyaml.scm/)
+[https://github.com/riku-ri/libyaml.ss/](https://github.com/riku-ri/libyaml.ss/)
 
 ## Requirements
 
@@ -18,7 +18,7 @@ section structure will follow
 
 ### Values in `yaml.h`
 
-[libyaml.scm<sub>git</sub>](.) will
+[libyaml.ss<sub>git</sub>](.) will
 export enum members and functions in
 [*yaml.h*](https://github.com/yaml/libyaml/blob/master/include/yaml.h) from
 [yaml/libyaml<sub>git</sub>](https://github.com/yaml/libyaml).
@@ -26,7 +26,7 @@ export enum members and functions in
 Functions and enum members can be used in scheme code directly.
 
 > Note that you may install libyaml development package in your system,
-> but [libyaml.scm<sub>git</sub>](.) will use the *yaml.h* in
+> but [libyaml.ss<sub>git</sub>](.) will use the *yaml.h* in
 > submodule *src/libyaml* but not the yaml.h in your system
 
 ### Read yaml file or string
@@ -38,7 +38,7 @@ Functions and enum members can be used in scheme code directly.
 #### `SCHEME-YAML-OBJECT`
 
 > As you will seen below,
-> [libyaml.scm<sub>git</sub>](.) define yaml document to vector.
+> [libyaml.ss<sub>git</sub>](.) define yaml document to vector.
 > Hence **A complete yaml object in scheme is always a vector**.
 > This means if provide a non-vector object as yaml content,
 > like `(yaml<- (list 1 2))` will lead to error.

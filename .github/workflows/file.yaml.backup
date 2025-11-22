@@ -52,7 +52,7 @@ jobs:
     - name: libyaml.release-info
       run: |
         m4 -P \
-          -Dm4_release="$(curl -L https://api.github.com/repos/riku-ri/libyaml.scm/releases | jq '.[].name' | xargs -n1 cut -b2- | xargs -I__ echo "(release \"__\")")" \
+          -Dm4_release="$(curl -L https://api.github.com/repos/riku-ri/libyaml.ss/releases | jq '.[].name' | xargs -n1 cut -b2- | xargs -I__ echo "(release \"__\")")" \
         <.libyaml.release-info.m4 | tee libyaml.release-info
         test -s libyaml.release-info
     - run: |

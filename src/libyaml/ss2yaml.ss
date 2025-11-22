@@ -28,24 +28,43 @@
 						"C_return((_p)->" to-access ... ");")
 					pointer
 				))))
-		(abort (syntax-rules ()
-			((abort condition ...) (begin
-				(print-call-chain (current-error-port))(newline (current-error-port))
-				(abort condition ...)))))
 		(ycondition (syntax-rules ()
-			((ycondition ? ...)
-				(condition (list 'libyaml ? ...)))))
+			((ycondition message others ...)
+				(condition
+					(list 'exn
+						(string->symbol "message") message
+						'call-chain (get-call-chain)
+					)
+					'(libyaml) '(<-yaml)
+					others ...
+				))
+			((ycondition message)
+				(condition
+					(list 'exn
+						(string->symbol "message") message
+						'call-chain (get-call-chain)
+					)
+					'(libyaml) '(<-yaml)
+				))
+		))
 	) (let*
 	(
 		(>< (varg
 			<>
 			'(#:literal yaml)
-			'(#:with-value #:indent #:port #:encoding)
+			'(#:with-value
+				#:indent #:port #:encoding
+				#:style:doc:start:implicit
+			)
 			'(#:without-value
 				#:close-output-port
 				#:strict-input
 			)
 		))
+		(assoc* (lambda (default key alist)
+			(let ((m (assoc key alist))) (if m (cdr m) default))))
+		(with-value (assoc* `() #:with-value ><))
+		(style:doc:start:implicit (assoc* 0 #:style:doc:start:implicit with-value))
 		(?close-output-port
 			(member #:close-output-port (cdr (assoc #:without-value ><))))
 		(?strict-input
@@ -53,7 +72,9 @@
 		(yaml (let ((yaml (car (cdr (assoc #:literal ><))))) (cond
 			(?strict-input (cond
 				((yaml? yaml) (yaml -1))
-			))
+				(else (abort (ycondition (sprintf
+					"#:strict-input is set but input is not well formatted:\n~S"
+					yaml) '(yaml?))))))
 			(else yaml)
 		)))
 	) (let*
@@ -63,7 +84,7 @@
 				((assoc #:port with-value)
 					(if (not (output-port? (cdr (assoc #:port with-value))))
 						(abort (ycondition
-							'message (sprintf
+							(sprintf
 								"#:port is not a output port:\n~S"
 								(cdr (assoc #:port with-value))))))
 					(cdr (assoc #:port with-value)))
@@ -93,33 +114,35 @@
 	(memset &emitter 0 (foreign-type-size "struct yaml_emitter_s"))
 
 	(define-syntax <-* (syntax-rules ()
-		((<-* emitter function event ...) (let ()
-			(let ((<< (function event ...)))
+		((<-* function args ...) (let ()
+			(let ((<< (function &event args ...)))
 				(cond ((not (= << 1))
-					(abort (ycondition 'message (sprintf "~S failed and return ~S"
+					(abort (ycondition (sprintf "~S failed and return ~S"
 						(quote function) <<))))))
-			(let ((<< (yaml_emitter_emit emitter (car (list event ...)))))
+			(let ((<< (yaml_emitter_emit &emitter &event)))
 				(cond ((not (= << 1))
-					(abort (ycondition 'message (sprintf "~S after ~S failed and return ~S"
+					(abort (ycondition (sprintf "~S after ~S failed and return ~S"
 						(quote yaml_emitter_emit)
 						(quote function) <<))))))))))
 
 	(yaml_emitter_initialize &emitter)
 	(yaml_emitter_set_output_file &emitter port)
-	(<-* &emitter yaml_stream_start_event_initialize &event encoding)
+	(<-* yaml_stream_start_event_initialize
+		encoding)
 	; XXX: encoding would not make exception or
 	;      make struct content different inside yaml/libyaml
 	;      so here did not check the error
 	;      but invalid encoding may generate undefined character
 	(define (<-yaml-document yaml)
-		(<-* &emitter yaml_document_start_event_initialize &event #f #f #f 0)
+		(<-* yaml_document_start_event_initialize
+			#f #f #f style:doc:start:implicit)
 		(define (:<-yaml-in-document yaml)
 			(cond
 				((null? yaml)
-					(<-* &emitter yaml_scalar_event_initialize &event #f #f "~" -1 1 1
-						YAML_PLAIN_SCALAR_STYLE))
+					(<-* yaml_scalar_event_initialize
+						#f #f "~" -1 1 1 YAML_PLAIN_SCALAR_STYLE))
 				((ymap? yaml)
-					(<-* &emitter yaml_mapping_start_event_initialize &event
+					(<-* yaml_mapping_start_event_initialize
 						#f #f 0 YAML_BLOCK_MAPPING_STYLE)
 					(let ((alist (car yaml)))
 						(map
@@ -127,13 +150,13 @@
 								(:<-yaml-in-document (car ?))
 								(:<-yaml-in-document (cdr ?)))
 							alist))
-					(<-* &emitter yaml_mapping_end_event_initialize &event)
+					(<-* yaml_mapping_end_event_initialize)
 				)
 				((ylist? yaml)
-					(<-* &emitter yaml_sequence_start_event_initialize &event
+					(<-* yaml_sequence_start_event_initialize
 						#f #f 0 YAML_BLOCK_SEQUENCE_STYLE)
 					(map :<-yaml-in-document (vector->list yaml))
-					(<-* &emitter yaml_sequence_end_event_initialize &event)
+					(<-* yaml_sequence_end_event_initialize)
 				)
 				(else
 				; Unknown error: if plain_implicit and quoted_implicit are both 0
@@ -147,29 +170,40 @@
 										(else YAML_PLAIN_SCALAR_STYLE)))
 									(plain_implicit (if (string? ((yaml<- yaml))) 1 0))
 								)
-								(<-* &emitter yaml_scalar_event_initialize
-									&event #f #f yaml -1 plain_implicit 1 style)))
+								(<-* yaml_scalar_event_initialize
+									#f #f yaml -1 plain_implicit 1 style)))
 						((number? yaml)
 							(cond
 								((nan? yaml) (let ((scalar ".nan"))
-									(<-* &emitter yaml_scalar_event_initialize &event #f #f scalar -1 1 1
-										YAML_PLAIN_SCALAR_STYLE)))
+									(<-* yaml_scalar_event_initialize
+										#f #f scalar -1 1 1 YAML_PLAIN_SCALAR_STYLE)))
 								((infinite? yaml) (let ((scalar (if (> yaml 0) "+.inf" "-.inf")))
-									(<-* &emitter yaml_scalar_event_initialize &event #f #f scalar -1 1 1
-										YAML_PLAIN_SCALAR_STYLE)))
+									(<-* yaml_scalar_event_initialize
+										#f #f scalar -1 1 1 YAML_PLAIN_SCALAR_STYLE)))
 								(else (let ((scalar (number->string yaml)))
-									(<-* &emitter yaml_scalar_event_initialize &event #f #f scalar -1 1 1
-										YAML_PLAIN_SCALAR_STYLE)))))
+									(<-* yaml_scalar_event_initialize
+										#f #f scalar -1 1 1 YAML_PLAIN_SCALAR_STYLE)))))
 						((boolean? yaml) (let ((scalar (if yaml "true" "false")))
-							(<-* &emitter yaml_scalar_event_initialize &event #f #f scalar -1 1 1
+							(<-* yaml_scalar_event_initialize
+								#f #f scalar -1 1 1
 								YAML_PLAIN_SCALAR_STYLE)))
-					))))
+						(else
+							(abort (ycondition
+								(sprintf "Not a valid yaml format:\n~S" yaml)))
+						)
+					)
+				)
+			))
 		(:<-yaml-in-document yaml)
-		(<-* &emitter yaml_document_end_event_initialize &event 0)
+		(<-* yaml_document_end_event_initialize
+			0)
 	)
-	(map <-yaml-document yaml)
+	(cond
+		((ydoc? yaml) (map <-yaml-document yaml))
+		(else (<-yaml-document yaml))
+	)
 	; XXX if map is parallel, emitter may be undefined
-	(<-* &emitter yaml_stream_end_event_initialize &event)
+	(<-* yaml_stream_end_event_initialize)
 	(close)
 )))))
 

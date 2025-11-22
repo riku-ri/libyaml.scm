@@ -11,11 +11,17 @@
 		; only catch exception here
 		; just keep always true if no exception
 		(equal? (car (? -1)) (?))
+		(ydoc? (? -1))
+	))
+
+(define (ydoc? ?)
+	(and
+		(list? ?)
 		(foldl (lambda (l r) (and l r)) #t
 			(map
 				((lambda (@) (@ @)) (lambda (@) (lambda (?)
 					(or (ylist? ?) (ymap? ?) (yscalar? ?)))))
-				(? -1)
+				?
 			)
 		)
 	))

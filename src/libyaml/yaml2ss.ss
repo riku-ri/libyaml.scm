@@ -29,8 +29,24 @@
 					pointer
 				))))
 		(ycondition (syntax-rules ()
-			((ycondition message ...)
-				(condition (list 'libyaml (string->symbol "message") message) ...))))
+			((ycondition message others ...)
+				(condition
+					(list 'exn
+						(string->symbol "message") message
+						'call-chain (get-call-chain)
+					)
+					'(libyaml) '(yaml<-)
+					others ...
+				))
+			((ycondition message)
+				(condition
+					(list 'exn
+						(string->symbol "message") message
+						'call-chain (get-call-chain)
+					)
+					'(libyaml) '(yaml<-)
+				))
+		))
 	) (let*
 	(
 		(inerr "internal logic error, please contact maintainer")
@@ -143,10 +159,10 @@
 				(*-> "yaml_event_t" &event "data.mapping_start.tag" c-string)
 			)
 			(abort (ycondition (sprintf
-				"tag at [line:~S , colunm:~S]"
+				"yaml-tag is not supported, tag at [line:~S , colunm:~S]"
 				(+ 1 (*-> "yaml_event_t" &event "start_mark.line" size_t))
 				(+ 1 (*-> "yaml_event_t" &event "start_mark.column" size_t)))
-				"yaml-tag is not supported"))))
+				))))
 		(cond
 			((= event YAML_NO_EVENT)
 				(abort (ycondition (sprintf
@@ -158,8 +174,9 @@
 					)
 					(cond
 						((not (assoc anchor <anchor>))
-							(abort (ycondition
-								"No reference or circular reference to anchor" anchor))))
+							(abort (ycondition (sprintf
+								"No reference or circular reference to anchor:\n~S"
+								anchor)))))
 					(cdr (assoc anchor <anchor>))))
 			((= event YAML_SCALAR_EVENT)
 				(let*
@@ -318,7 +335,7 @@
 			))
 		(cond
 			((yaml? yaml) (close) yaml)
-			(else (abort (ycondition inerr))))
+			(else (abort (ycondition inerr '(yaml?)))))
 	)
 ))))) ;define/let/let-syntax
 
